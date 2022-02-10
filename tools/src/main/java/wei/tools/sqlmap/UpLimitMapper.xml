@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="wei.tools.dao.UpLimitMapper">
+  <resultMap id="BaseResultMap" type="wei.tools.model.UpLimit">
+    <id column="id" jdbcType="INTEGER" property="id" />
+    <result column="code" jdbcType="VARCHAR" property="code" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="last_time" jdbcType="VARCHAR" property="lastTime" />
+    <result column="date" jdbcType="VARCHAR" property="date" />
+    <result column="reason" jdbcType="VARCHAR" property="reason" />
+    <result column="open_count" jdbcType="INTEGER" property="openCount" />
+    <result column="sequence_count" jdbcType="INTEGER" property="sequenceCount" />
+    <result column="sequence_type" jdbcType="VARCHAR" property="sequenceType" />
+    <result column="limit_type" jdbcType="VARCHAR" property="limitType" />
+  </resultMap>
+  <insert id="insert" keyColumn="id" keyProperty="id" parameterType="wei.tools.model.UpLimit" useGeneratedKeys="true">
+    insert into t_up_limit (code, name, last_time,
+      date, reason, open_count, 
+      sequence_count, sequence_type, limit_type
+      )
+    values (#{code,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{lastTime,jdbcType=VARCHAR}, 
+      #{date,jdbcType=VARCHAR}, #{reason,jdbcType=VARCHAR}, #{openCount,jdbcType=INTEGER}, 
+      #{sequenceCount,jdbcType=INTEGER}, #{sequenceType,jdbcType=VARCHAR}, #{limitType,jdbcType=VARCHAR}
+      )
+  </insert>
+  <update id="updateByPrimaryKey" parameterType="wei.tools.model.UpLimit">
+    update t_up_limit
+    set code = #{code,jdbcType=VARCHAR},
+      name = #{name,jdbcType=VARCHAR},
+      last_time = #{lastTime,jdbcType=VARCHAR},
+      date = #{date,jdbcType=VARCHAR},
+      reason = #{reason,jdbcType=VARCHAR},
+      open_count = #{openCount,jdbcType=INTEGER},
+      sequence_count = #{sequenceCount,jdbcType=INTEGER},
+      sequence_type = #{sequenceType,jdbcType=VARCHAR},
+      limit_type = #{limitType,jdbcType=VARCHAR}
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+  <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    select id, code, name, last_time, date, reason, open_count, sequence_count, sequence_type, 
+    limit_type
+    from t_up_limit
+    where id = #{id,jdbcType=INTEGER}
+  </select>
+  <select id="findAll" resultMap="BaseResultMap">
+    select id, code, name, last_time, date, reason, open_count, sequence_count, sequence_type, 
+    limit_type
+    from t_up_limit
+  </select>
+
+  <insert id="batchInsertOrUpdate">
+    insert into t_up_limit (code,name,last_time,date,reason,open_count,sequence_count,sequence_type,limit_type)
+    values
+    <foreach collection="records" index="index" item="record" separator=",">
+      (#{record.code},#{record.name},#{record.lastTime},#{record.date},#{record.reason},#{record.openCount},#{record.sequenceCount}
+      ,#{record.sequenceType},#{record.limitType})
+    </foreach>
+    ON DUPLICATE KEY UPDATE code=values(code),name=values(name),last_time=values(last_time),date=values(date),reason=values(reason)
+    ,open_count=values(open_count),sequence_count=values(sequence_count),sequence_type=values(sequence_type),name=values(sequence_type),name=values(sequence_type)
+  </insert>
+</mapper>

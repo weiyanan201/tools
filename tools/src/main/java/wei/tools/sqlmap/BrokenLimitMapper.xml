@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="wei.tools.dao.BrokenLimitMapper">
+  <resultMap id="BaseResultMap" type="wei.tools.model.BrokenLimit">
+    <id column="id" jdbcType="INTEGER" property="id" />
+    <result column="code" jdbcType="VARCHAR" property="code" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="first_time" jdbcType="VARCHAR" property="firstTime" />
+    <result column="last_time" jdbcType="VARCHAR" property="lastTime" />
+    <result column="date" jdbcType="VARCHAR" property="date" />
+    <result column="open_count" jdbcType="INTEGER" property="openCount" />
+    <result column="close_time_min" jdbcType="VARCHAR" property="closeTimeMin" />
+    <result column="theme" jdbcType="VARCHAR" property="theme" />
+    <result column="loss_rate" jdbcType="REAL" property="lossRate" />
+  </resultMap>
+  <insert id="insert" keyColumn="id" keyProperty="id" parameterType="wei.tools.model.BrokenLimit" useGeneratedKeys="true">
+    insert into t_broken_limit (code, name, first_time, 
+      last_time, date,
+      open_count, close_time_min, theme, 
+      loss_rate)
+    values (#{code,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{firstTime,jdbcType=VARCHAR}, 
+      #{lastTime,jdbcType=VARCHAR}, #{date,jdbcType=VARCHAR},
+      #{openCount,jdbcType=INTEGER}, #{closeTimeMin,jdbcType=VARCHAR}, #{theme,jdbcType=VARCHAR}, 
+      #{lossRate,jdbcType=REAL})
+  </insert>
+  <update id="updateByPrimaryKey" parameterType="wei.tools.model.BrokenLimit">
+    update t_broken_limit
+    set code = #{code,jdbcType=VARCHAR},
+      name = #{name,jdbcType=VARCHAR},
+      first_time = #{firstTime,jdbcType=VARCHAR},
+      last_time = #{lastTime,jdbcType=VARCHAR},
+      date = #{date,jdbcType=VARCHAR},
+      open_count = #{openCount,jdbcType=INTEGER},
+      close_time_min = #{closeTimeMin,jdbcType=VARCHAR},
+      theme = #{theme,jdbcType=VARCHAR},
+      loss_rate = #{lossRate,jdbcType=REAL}
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+  <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    select id, code, name, first_time, last_time, date, open_count, close_time_min,
+    theme, loss_rate
+    from t_broken_limit
+    where id = #{id,jdbcType=INTEGER}
+  </select>
+  <select id="findAll" resultMap="BaseResultMap">
+    select id, code, name, first_time, last_time, date, open_count, close_time_min,
+    theme, loss_rate
+    from t_broken_limit
+  </select>
+
+  <insert id="batchInsertOrUpdate">
+    insert into t_broken_limit (code,name,first_time,last_time,date,open_count,close_time_min,theme,loss_rate)
+    values
+    <foreach collection="records" index="index" item="record" separator=",">
+      (#{record.code},#{record.name},#{record.firstTime},#{record.lastTime},#{record.date},#{record.openCount},#{record.closeTimeMin}
+      ,#{record.theme},#{record.loss_rate})
+    </foreach>
+    ON DUPLICATE KEY UPDATE code=values(code),name=values(name),first_time=values(first_time),last_time=values(last_time),date=values(date)
+    ,open_count=values(open_count),close_time_min=values(close_time_min),theme=values(theme),loss_rate=values(loss_rate)
+  </insert>
+</mapper>

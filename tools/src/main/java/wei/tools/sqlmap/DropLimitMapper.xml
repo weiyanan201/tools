@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="wei.tools.dao.DropLimitMapper">
+  <resultMap id="BaseResultMap" type="wei.tools.model.DropLimit">
+    <id column="id" jdbcType="INTEGER" property="id" />
+    <result column="code" jdbcType="VARCHAR" property="code" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="date" jdbcType="VARCHAR" property="date" />
+    <result column="reason" jdbcType="VARCHAR" property="reason" />
+    <result column="sequence_count" jdbcType="INTEGER" property="sequenceCount" />
+    <result column="limit_type" jdbcType="VARCHAR" property="limitType" />
+  </resultMap>
+  <insert id="insert" keyColumn="id" keyProperty="id" parameterType="wei.tools.model.DropLimit" useGeneratedKeys="true">
+    insert into t_drop_limit (code, name, date,
+      reason, sequence_count, limit_type
+      )
+    values (#{code,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{date,jdbcType=VARCHAR}, 
+      #{reason,jdbcType=VARCHAR}, #{sequenceCount,jdbcType=INTEGER}, #{limitType,jdbcType=VARCHAR}
+      )
+  </insert>
+  <update id="updateByPrimaryKey" parameterType="wei.tools.model.DropLimit">
+    update t_drop_limit
+    set code = #{code,jdbcType=VARCHAR},
+      name = #{name,jdbcType=VARCHAR},
+      date = #{date,jdbcType=VARCHAR},
+      reason = #{reason,jdbcType=VARCHAR},
+      sequence_count = #{sequenceCount,jdbcType=INTEGER},
+      limit_type = #{limitType,jdbcType=VARCHAR}
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+  <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    select id, code, name, date, reason, sequence_count, limit_type
+    from t_drop_limit
+    where id = #{id,jdbcType=INTEGER}
+  </select>
+  <select id="findAll" resultMap="BaseResultMap">
+    select id, code, name, date, reason, sequence_count, limit_type
+    from t_drop_limit
+  </select>
+
+  <insert id="batchInsertOrUpdate">
+    insert into t_drop_limit (code,name,date,reason,sequence_count,limit_type)
+    values
+    <foreach collection="records" index="index" item="record" separator=",">
+      (#{record.code},#{record.name},#{record.date},#{record.reason},#{record.sequenceCount}
+      ,#{record.limitType})
+    </foreach>
+    ON DUPLICATE KEY UPDATE code=values(code),name=values(name),date=values(date),reason=values(reason)
+    ,sequence_count=values(sequence_count),limit_type=values(limit_type)
+  </insert>
+
+</mapper>
