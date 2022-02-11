@@ -100,4 +100,20 @@ public class BrokenLimit {
     public void setLossRate(Float lossRate) {
         this.lossRate = lossRate;
     }
+
+    @Override
+    public String toString() {
+        return "BrokenLimit{" +
+                "id=" + id +
+                ", code='" + code + '\'' +
+                ", name='" + name + '\'' +
+                ", firstTime='" + firstTime + '\'' +
+                ", lastTime='" + lastTime + '\'' +
+                ", date='" + date + '\'' +
+                ", openCount=" + openCount +
+                ", closeTimeMin='" + closeTimeMin + '\'' +
+                ", theme='" + theme + '\'' +
+                ", lossRate=" + lossRate +
+                '}';
+    }
 }

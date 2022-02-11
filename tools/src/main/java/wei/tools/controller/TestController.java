@@ -2,7 +2,6 @@ package wei.tools.controller;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.JSONPObject;
 import com.google.common.collect.Sets;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,7 +11,7 @@ import wei.tools.dao.TestMapper;
 import wei.tools.entity.HttpResult;
 import wei.tools.entity.PageRequest;
 import wei.tools.entity.PageResult;
-import wei.tools.model.Calendar;
+import wei.tools.model.TradingDay;
 import wei.tools.service.ApiService;
 
 import java.util.Set;
@@ -79,7 +78,7 @@ public class TestController {
             if (month==data.getInteger("month")){
                 //target
                 String dayStr = String.format(dateFormat,data.getInteger("year"),data.getInteger("month"),data.getInteger("day"));
-                Calendar calendar = new Calendar();
+                TradingDay calendar = new TradingDay();
                 calendar.setDayStr(dayStr);
                 calendar.setCnDay(data.getString("cnDay"));
                 if (data.containsKey("status")&&data.getInteger("status")==1&&workSets.contains(data.getString("cnDay"))){

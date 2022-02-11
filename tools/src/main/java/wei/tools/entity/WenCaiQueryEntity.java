@@ -30,6 +30,7 @@ public class WenCaiQueryEntity {
     //3板以上个股
     private String moreStr;
 
+
     public int getUpCount() {
         return upCount;
     }

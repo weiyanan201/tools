@@ -1,12 +1,17 @@
 package wei.tools.model;
 
-public class Calendar {
+public class TradingDay {
+
+    public static int TRADING_TRUE = 1;
+    public static int TRADING_FALSE = 0;
 
     private String dayStr;
 
     private String cnDay;
 
     private Integer status=0;
+
+    private Integer isTrading;
 
     public String getDayStr() {
         return dayStr;
@@ -32,12 +37,21 @@ public class Calendar {
         this.status = status;
     }
 
+    public Integer getIsTrading() {
+        return isTrading;
+    }
+
+    public void setIsTrading(Integer isTrading) {
+        this.isTrading = isTrading;
+    }
+
     @Override
     public String toString() {
-        return "Calendar{" +
-                ", dayStr='" + dayStr + '\'' +
+        return "TradingDay{" +
+                "dayStr='" + dayStr + '\'' +
                 ", cnDay='" + cnDay + '\'' +
                 ", status=" + status +
+                ", isTrading=" + isTrading +
                 '}';
     }
 }

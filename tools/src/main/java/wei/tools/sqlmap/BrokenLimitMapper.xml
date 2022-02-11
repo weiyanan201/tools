@@ -53,7 +53,7 @@
     values
     <foreach collection="records" index="index" item="record" separator=",">
       (#{record.code},#{record.name},#{record.firstTime},#{record.lastTime},#{record.date},#{record.openCount},#{record.closeTimeMin}
-      ,#{record.theme},#{record.loss_rate})
+      ,#{record.theme},cast(#{record.lossRate,jdbcType=DECIMAL} as decimal(14,5)) )
     </foreach>
     ON DUPLICATE KEY UPDATE code=values(code),name=values(name),first_time=values(first_time),last_time=values(last_time),date=values(date)
     ,open_count=values(open_count),close_time_min=values(close_time_min),theme=values(theme),loss_rate=values(loss_rate)

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="wei.tools.dao.TradingDayMapper">
+  <resultMap id="BaseResultMap" type="wei.tools.model.TradingDay">
+    <result column="day_str" jdbcType="VARCHAR" property="dayStr" />
+    <result column="cn_day" jdbcType="VARCHAR" property="cnDay" />
+    <result column="status" jdbcType="INTEGER" property="status" />
+    <result column="is_trading" jdbcType="INTEGER" property="isTrading" />
+  </resultMap>
+  <insert id="insert" keyColumn="id"  parameterType="wei.tools.model.TradingDay" >
+    insert into t_trading_day (day_str, cn_day, status,is_trading
+      )
+    values (#{dayStr,jdbcType=VARCHAR}, #{cnDay,jdbcType=VARCHAR}, #{status,jdbcType=INTEGER}, #{isTrading,jdbcType=INTEGER}
+      )
+  </insert>
+
+
+  <select id="selectByDayStr" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select  day_str, cn_day, status,is_trading
+    from t_trading_day
+    where day_str = #{dayStr}
+  </select>
+
+  <select id="findAll" resultMap="BaseResultMap">
+    select day_str, cn_day, status,is_trading
+    from t_trading_day
+  </select>
+  
+  <insert id="batchInsertOrUpdate">
+    insert into t_trading_day (day_str,cn_day,status,is_trading)
+    values 
+    <foreach collection="calendars" index="index" item="calendar" separator=",">
+        (#{calendar.dayStr},#{calendar.cnDay},#{calendar.status},#{calendar.isTrading})
+    </foreach>
+    ON DUPLICATE KEY UPDATE cn_day=values(cn_day),status=values(status),is_trading=values(is_trading)
+  </insert>
+</mapper>
