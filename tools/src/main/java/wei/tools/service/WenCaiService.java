@@ -10,6 +10,8 @@ import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -39,6 +41,7 @@ public class WenCaiService {
 
     private static String wencaiUrl = "http://www.iwencai.com/customized/chart/get-robot-data";
 
+    private static Logger logger = LoggerFactory.getLogger(WenCaiService.class);
 
 
     public static String QUERY_FORMAT_ZHANGTING_FENXI= "%s涨停;非st;非新股；%s连续涨停天数>=1；上市时间超过50天";
@@ -143,20 +146,26 @@ public class WenCaiService {
      * @return
      */
     public String queryStockTheme(String stockName){
-        JSONObject paramJson = getWencaiJson(stockName);
-        JSONObject resultJson = apiService.post(wencaiUrl,paramJson);
+        try{
+            JSONObject paramJson = getWencaiJson(stockName);
+            JSONObject resultJson = apiService.post(wencaiUrl,paramJson);
 
-        JSONObject dataJson = resultJson.getJSONObject("data");
-        JSONArray answerArray = dataJson.getJSONArray("answer");
-        JSONObject answerJson = answerArray.getJSONObject(0);
-        JSONArray txtArray = answerJson.getJSONArray("txt");
-        JSONObject txtJson = txtArray.getJSONObject(0);
-        JSONObject contentJson = txtJson.getJSONObject("content");
-        JSONArray componentsArray = contentJson.getJSONArray("components");
-        JSONObject componentJson = componentsArray.getJSONObject(0);
-        JSONArray component_data_array = componentJson.getJSONArray("data");
-        JSONObject component_data_json = component_data_array.getJSONObject(0);
-        return component_data_json.getString("所属概念");
+            JSONObject dataJson = resultJson.getJSONObject("data");
+            JSONArray answerArray = dataJson.getJSONArray("answer");
+            JSONObject answerJson = answerArray.getJSONObject(0);
+            JSONArray txtArray = answerJson.getJSONArray("txt");
+            JSONObject txtJson = txtArray.getJSONObject(0);
+            JSONObject contentJson = txtJson.getJSONObject("content");
+            JSONArray componentsArray = contentJson.getJSONArray("components");
+            JSONObject componentJson = componentsArray.getJSONObject(0);
+            JSONArray component_data_array = componentJson.getJSONArray("data");
+            JSONObject component_data_json = component_data_array.getJSONObject(0);
+            return component_data_json.getString("所属概念");
+        }catch (Exception e){
+            logger.warn("{} 提取题材出现异常，已忽略",stockName);
+            return null;
+        }
+
     }
 
     /**
@@ -477,7 +486,7 @@ public class WenCaiService {
         boolean isNewRow = true;
         int insertIndex = 0;
         int insertNum = 0;
-        for (int i=2;i<sheet.getLastRowNum();i++){
+        for (int i=2;i<=sheet.getLastRowNum();i++){
             //取第一列 比较日期
             Cell cell = sheet.getRow(i).getCell(0);
             if(cell==null || StringUtils.isBlank(cell.getStringCellValue())){
