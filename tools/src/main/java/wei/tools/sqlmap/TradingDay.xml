@@ -34,4 +34,9 @@
     </foreach>
     ON DUPLICATE KEY UPDATE cn_day=values(cn_day),status=values(status),is_trading=values(is_trading)
   </insert>
+
+  <select id="getLastTradingDayStr" resultType="java.lang.String">
+    SELECT max(day_str) FROM `t_trading_day` where day_str <![CDATA[<]]> #{dayStr} and is_trading=1
+  </select>
+
 </mapper>

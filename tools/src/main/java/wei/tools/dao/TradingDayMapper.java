@@ -13,4 +13,7 @@ public interface TradingDayMapper {
     List<TradingDay> findAll();
 
     void batchInsertOrUpdate(@Param("calendars") List<TradingDay> calendars);
+
+    //获取上一个交易日的日期
+    String getLastTradingDayStr(@Param("dayStr") String dayStr);
 }

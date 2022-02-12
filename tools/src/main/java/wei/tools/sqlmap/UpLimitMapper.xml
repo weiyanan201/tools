@@ -56,6 +56,13 @@
       ,#{record.sequenceType},#{record.limitType})
     </foreach>
     ON DUPLICATE KEY UPDATE code=values(code),name=values(name),last_time=values(last_time),date=values(date),reason=values(reason)
-    ,open_count=values(open_count),sequence_count=values(sequence_count),sequence_type=values(sequence_type),name=values(sequence_type),name=values(sequence_type)
+    ,open_count=values(open_count),sequence_count=values(sequence_count),sequence_type=values(sequence_type),limit_type=values(limit_type)
   </insert>
+
+  <select id="selectByDateStr" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select id, code, name, last_time, date, reason, open_count, sequence_count, sequence_type,
+    limit_type
+    from t_up_limit
+    where date = #{dateStr,jdbcType=VARCHAR}
+  </select>
 </mapper>

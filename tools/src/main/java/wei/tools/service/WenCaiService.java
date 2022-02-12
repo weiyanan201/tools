@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import wei.tools.dao.BrokenLimitMapper;
 import wei.tools.dao.DropLimitMapper;
 import wei.tools.dao.UpLimitMapper;
+import wei.tools.entity.StockEntity;
 import wei.tools.entity.WenCaiQueryEntity;
 import wei.tools.exception.ToolsException;
 import wei.tools.model.BrokenLimit;
@@ -24,6 +25,7 @@ import wei.tools.model.UpLimit;
 import wei.tools.util.DateUtils;
 
 import java.io.*;
+import java.text.ParseException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -69,6 +71,7 @@ public class WenCaiService {
     private static String FIELD_BROKEN_NAME = "股票简称";
     private static String FIELD_BROKEN_FIRST_TIME_FORMAT = "首次涨停时间[%s]";
     private static String FIELD_BROKEN_LAST_TIME_FORMAT = "涨停时间明细[%s]";
+    private static String FIELD_BROKEN_CLOSE_PRICE = "最新价";
 
     //上涨下跌提取
     private static Pattern upDropCountPattern = Pattern.compile("\\((\\d+)+\\).*\\((\\d+)+\\)");
@@ -89,7 +92,12 @@ public class WenCaiService {
     @Autowired
     private TradingDayService tradingDayService;
 
-    public void reviewByDate(String dateStr) throws IOException {
+    /**
+     * 每日复盘
+     * @param dateStr
+     * @throws IOException
+     */
+    public void reviewByDate(String dateStr) throws IOException, ParseException {
 
         DateUtils.checkFormat(dateStr);
         if (!tradingDayService.isTradingDay(dateStr)){
@@ -314,11 +322,21 @@ public class WenCaiService {
      * @param entity
      * 非当庭数据不准确
      */
-    private void parseBreakResult(JSONObject breakResult,WenCaiQueryEntity entity,String dateStr){
+    private void parseBreakResult(JSONObject breakResult,WenCaiQueryEntity entity,String date) throws ParseException {
         String todayStr = DateUtils.getTodayStr();
-        boolean isToday = StringUtils.equals(todayStr,dateStr);
+        boolean isToday = StringUtils.equals(todayStr,date);
+        String dateStr = DateUtils.coverToUnSymbol(date);
 
-        dateStr = DateUtils.coverToUnSymbol(dateStr);
+        List<UpLimit> lastUpLimitList = Lists.newArrayList();
+        Map<String,UpLimit> lastUpLimitNameMap = Maps.newHashMap();
+
+        String lastDay = tradingDayService.getLastTradingDay(date);
+        if (!StringUtils.isBlank(lastDay)){
+            lastUpLimitList = upLimitMapper.selectByDateStr(DateUtils.coverToUnSymbol(lastDay));
+            for (UpLimit upLimit : lastUpLimitList){
+                lastUpLimitNameMap.put(upLimit.getName(),upLimit);
+            }
+        }
 
         String field_broken_code = FIELD_BROKEN_CODE;
         String field_broken_close_time_min = String.format(FIELD_BROKEN_CLOSE_TIME_MIN_FORMAT,dateStr);
@@ -327,6 +345,7 @@ public class WenCaiService {
         String field_broken_name = FIELD_BROKEN_NAME;
         String field_broken_first_time = String.format(FIELD_BROKEN_FIRST_TIME_FORMAT,dateStr);
         String field_broken_last_time = String.format(FIELD_BROKEN_LAST_TIME_FORMAT,dateStr);
+        String field_broken_close_price = FIELD_BROKEN_CLOSE_PRICE;
 
         JSONObject dataJson = breakResult.getJSONObject("data");
         JSONArray answerArray = dataJson.getJSONArray("answer");
@@ -352,8 +371,11 @@ public class WenCaiService {
                 //亏损率 最新涨跌幅-10
                 if (isToday){
                     limit.setLossRate(resultJson.getFloat(field_broken_loss_rate)-10);
+                    limit.setClosePrice(resultJson.getFloat(field_broken_close_price));
                 }else{
-                    limit.setLossRate(stockService.getPriceRateByStockCodeAndDate(resultJson.getString(field_broken_code),dateStr)-10);
+                    StockEntity stockEntity = stockService.getDetailByStockCodeAndDate(resultJson.getString(field_broken_code),dateStr);
+                    limit.setLossRate(stockEntity.getPriceRate()-10);
+                    limit.setClosePrice(stockEntity.getClosePrice());
                 }
 
                 String timeDetail = resultJson.getString(field_broken_last_time);
@@ -363,6 +385,17 @@ public class WenCaiService {
                 limit.setName(resultJson.getString(field_broken_name));
                 limit.setTheme(queryStockTheme(resultJson.getString(field_broken_name)));
                 limit.setDate(dateStr);
+
+                //统计上个交易日涨停类型
+                if (lastUpLimitList.size()>0){
+                    //昨日统计过涨停内容
+                    if (lastUpLimitNameMap.containsKey(limit.getName())){
+                        limit.setBrokenLimitType(lastUpLimitNameMap.get(limit.getName()).getSequenceCount()+1+"板");
+                    }else {
+                        limit.setBrokenLimitType("首板");
+                    }
+                }
+
                 lists.add(limit);
             }
 
@@ -623,7 +656,6 @@ public class WenCaiService {
             //无跌停
         }
 
-        System.out.println("xxx");
     }
 
 }

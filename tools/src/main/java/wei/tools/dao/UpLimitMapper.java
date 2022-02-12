@@ -15,4 +15,6 @@ public interface UpLimitMapper {
     int updateByPrimaryKey(UpLimit record);
 
     void batchInsertOrUpdate(@Param("records") List<UpLimit> records);
+
+    List<UpLimit> selectByDateStr(@Param("dateStr")String dateStr);
 }

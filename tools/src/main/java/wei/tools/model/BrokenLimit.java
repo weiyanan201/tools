@@ -21,6 +21,10 @@ public class BrokenLimit {
 
     private Float lossRate;
 
+    private Float closePrice;
+
+    private String brokenLimitType;
+
     public Integer getId() {
         return id;
     }
@@ -101,6 +105,22 @@ public class BrokenLimit {
         this.lossRate = lossRate;
     }
 
+    public Float getClosePrice() {
+        return closePrice;
+    }
+
+    public void setClosePrice(Float closePrice) {
+        this.closePrice = closePrice;
+    }
+
+    public String getBrokenLimitType() {
+        return brokenLimitType;
+    }
+
+    public void setBrokenLimitType(String brokenLimitType) {
+        this.brokenLimitType = brokenLimitType;
+    }
+
     @Override
     public String toString() {
         return "BrokenLimit{" +
@@ -114,6 +134,8 @@ public class BrokenLimit {
                 ", closeTimeMin='" + closeTimeMin + '\'' +
                 ", theme='" + theme + '\'' +
                 ", lossRate=" + lossRate +
+                ", closePrice=" + closePrice +
+                ", brokenLimitType='" + brokenLimitType + '\'' +
                 '}';
     }
 }
