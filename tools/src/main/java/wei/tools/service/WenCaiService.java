@@ -18,11 +18,11 @@ import org.springframework.stereotype.Service;
 import wei.tools.dao.BrokenLimitMapper;
 import wei.tools.dao.DropLimitMapper;
 import wei.tools.dao.UpLimitMapper;
-import wei.tools.entity.StockEntity;
 import wei.tools.entity.WenCaiQueryEntity;
 import wei.tools.exception.ToolsException;
 import wei.tools.model.BrokenLimit;
 import wei.tools.model.DropLimit;
+import wei.tools.model.StockDetail;
 import wei.tools.model.UpLimit;
 import wei.tools.util.DateUtils;
 
@@ -85,7 +85,7 @@ public class WenCaiService {
     @Autowired
     private ApiService apiService;
     @Autowired
-    private StockService stockService;
+    private StockDetailService stockDetailService;
     @Autowired
     private UpLimitMapper upLimitMapper;
     @Autowired
@@ -382,9 +382,9 @@ public class WenCaiService {
                     limit.setLossRate(resultJson.getFloat(field_broken_loss_rate)-10);
                     limit.setClosePrice(resultJson.getFloat(field_broken_close_price));
                 }else{
-                    StockEntity stockEntity = stockService.getDetailByStockCodeAndDate(resultJson.getString(field_broken_code),dateStr);
-                    limit.setLossRate(stockEntity.getPriceRate()-10);
-                    limit.setClosePrice(stockEntity.getClosePrice());
+                    StockDetail stockDetail = stockDetailService.getDetailByStockCodeAndDate(resultJson.getString(field_broken_code),resultJson.getString(field_broken_name),dateStr);
+                    limit.setLossRate(stockDetail.getClosePriceRate().floatValue()-10);
+                    limit.setClosePrice(stockDetail.getClosePrice().floatValue());
                 }
 
                 String timeDetail = resultJson.getString(field_broken_last_time);

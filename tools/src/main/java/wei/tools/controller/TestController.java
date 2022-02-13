@@ -25,17 +25,8 @@ import java.util.Set;
 public class TestController {
 
     @Autowired
-    private TestMapper testMapper;
-    @Autowired
     private ApiService apiService;
 
-    @GetMapping(value = "/findAll")
-    public HttpResult findAll() {
-        PageRequest request = new PageRequest();
-        PageResult pageResult = new PageResult();
-        System.out.println("hello world");
-        return HttpResult.ok(testMapper.findAll(request,pageResult));
-    }
 
     @GetMapping(value = "/wc")
     public HttpResult wc() {

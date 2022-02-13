@@ -1,18 +1,16 @@
 package wei.tools;
 
 import org.junit.jupiter.api.Test;
+import org.junit.platform.commons.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import wei.tools.dao.TradingDayMapper;
 import wei.tools.entity.WenCaiQueryEntity;
 import wei.tools.initCode.CalendarInitService;
-import wei.tools.model.TradingDay;
-import wei.tools.service.ApiService;
-import wei.tools.service.StockService;
-import wei.tools.service.WenCaiService;
-import wei.tools.util.ExcelTest;
+import wei.tools.model.StockDetail;
+import wei.tools.service.*;
 
 import java.io.IOException;
+import java.text.ParseException;
 
 @SpringBootTest
 class ToolsApplicationTests {
@@ -22,29 +20,31 @@ class ToolsApplicationTests {
 	@Autowired
 	private CalendarInitService calendarInitService;
 	@Autowired
-	private TradingDayMapper calendarMapper;
+	private TradingDayService tradingDayService;
 	@Autowired
 	private WenCaiService wenCaiService;
 	@Autowired
-	private StockService stockService;
+	private StockDetailService stockDetailService;
 
 	@Test
-	void contextLoads() {
-		calendarInitService.initByYear(2021);
-		calendarInitService.initByYear(2022);
+	void testTradingDayService() throws ParseException {
+		String str = tradingDayService.getLastTradingDay("2021-01-01");
+		System.out.println(str);
+		System.out.println(StringUtils.isBlank(str));
+		System.out.println(str==null);
 	}
 
 	@Test
-	void testQuery(){
-		TradingDay calendar = calendarMapper.selectByDayStr("2022-05-04");
-		System.out.println(calendar);
+	void testStockEntity(){
+		StockDetail entity = stockDetailService.getDetailByStockCodeAndDate("002235","安妮股份","20220211");
+		System.out.println(entity);
 	}
 
 	@Test
-	void testWencai() throws IOException {
+	void testWencai() throws IOException, ParseException {
 //		System.out.println(stockService.getPriceRateByStockCodeAndDate("002235","20220209"));
 
-		wenCaiService.reviewByDate("2022-01-04");
+		wenCaiService.reviewByDate("2022-02-11");
 //		System.out.println(wenCaiService.queryStockTheme("安妮股份"));
 //		System.out.println(result);
 

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="wei.tools.dao.StockDetailMapper">
+  <resultMap id="BaseResultMap" type="wei.tools.model.StockDetail">
+    <result column="code" jdbcType="VARCHAR" property="code" />
+    <result column="name" jdbcType="VARCHAR" property="name" />
+    <result column="date_str" jdbcType="VARCHAR" property="dateStr" />
+    <result column="open_price" jdbcType="DECIMAL" property="openPrice" />
+    <result column="open_price_rate" jdbcType="DECIMAL" property="openPriceRate" />
+    <result column="close_price" jdbcType="DECIMAL" property="closePrice" />
+    <result column="close_price_rate" jdbcType="DECIMAL" property="closePriceRate" />
+    <result column="diff_price" jdbcType="DECIMAL" property="diffPrice" />
+    <result column="min_price" jdbcType="DECIMAL" property="minPrice" />
+    <result column="min_price_rate" jdbcType="DECIMAL" property="minPriceRate" />
+    <result column="max_price" jdbcType="DECIMAL" property="maxPrice" />
+    <result column="max_price_rate" jdbcType="DECIMAL" property="maxPriceRate" />
+    <result column="turnover_rate" jdbcType="DECIMAL" property="turnoverRate" />
+    <result column="swing_rate" jdbcType="DECIMAL" property="swingRate" />
+    <result column="last_day_close_price" jdbcType="DECIMAL" property="lastDayClosePrice" />
+  </resultMap>
+  <insert id="insert" parameterType="wei.tools.model.StockDetail">
+    insert into t_stock_detail (code, name, date_str, 
+      open_price, open_price_rate, close_price, 
+      close_price_rate, diff_price,
+      min_price, min_price_rate, max_price, 
+      max_price_rate, turnover_rate, swing_rate, 
+      last_day_close_price)
+    values (#{code,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{dateStr,jdbcType=VARCHAR}, 
+      #{openPrice,jdbcType=DECIMAL}, #{openPriceRate,jdbcType=DECIMAL}, #{closePrice,jdbcType=DECIMAL}, 
+      #{closePriceRate,jdbcType=DECIMAL}, #{diffPrice,jdbcType=DECIMAL},
+      #{minPrice,jdbcType=DECIMAL}, #{minPriceRate,jdbcType=DECIMAL}, #{maxPrice,jdbcType=DECIMAL}, 
+      #{maxPriceRate,jdbcType=DECIMAL}, #{turnoverRate,jdbcType=DECIMAL}, #{swingRate,jdbcType=DECIMAL}, 
+      #{lastDayClosePrice,jdbcType=DECIMAL})
+  </insert>
+  <select id="findAll" resultMap="BaseResultMap">
+    select code, name, date_str, open_price, open_price_rate, close_price, close_price_rate, 
+    diff_price,  min_price, min_price_rate, max_price, max_price_rate,
+    turnover_rate, swing_rate, last_day_close_price
+    from t_stock_detail
+  </select>
+</mapper>
