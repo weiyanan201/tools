@@ -48,6 +48,15 @@ public class WenCaiService {
     public static String QUERY_FORMAT_UP_DROP = "%s上涨个股；%s下跌个股；";
     public static String QUERY_FORMAT_DIETING = "%s 跌停;非st；";
     public static String QUERY_FORMAT_BROKEN = "%s炸板；非st";
+    //行业 涨停个数维度
+    public static String QUERY_FORMAT_BUSINESS_UPLIMIT = "%s 板块涨幅及涨停个数；同花顺行业指数；按 %s 涨停个数从大到小排序";
+    //行业 涨幅维度
+    public static String QUERY_FORMAT_BUSINESS_ROSE = "%s 板块涨幅及涨停个数；同花顺行业指数；按 %s 涨跌幅从大到小排序";
+    //题材 涨停个数维度
+    public static String QUERY_FORMAT_THEME_UPLIMIT = "%s 板块涨幅及涨停个数；同花顺概念指数；按 %s 涨停个数从大到小排序";
+    //题材 涨幅维度
+    public static String QUERY_FORMAT_THEME_ROSE = "%s 板块涨幅及涨停个数；同花顺概念指数；按 %s 涨跌幅从大到小排序";
+    //
 
     //涨停字段
     private static String FIELD_LIMIT_TYPE_FORMAT = "涨停类型[%s]";
@@ -108,33 +117,27 @@ public class WenCaiService {
         }
 
         WenCaiQueryEntity entity = new WenCaiQueryEntity();
-//        //统计涨停信息
-
-        String zhangtingStr = String.format(QUERY_FORMAT_ZHANGTING_FENXI,dateStr,dateStr);
-        JSONObject zhangtingJson = getWencaiJson(zhangtingStr);
-        JSONObject zhangtingResult = apiService.post(wencaiUrl,zhangtingJson);
-        parseZhangtingResult(zhangtingResult,entity,dateStr);
-
-//        //统计上涨下跌
-        String upDropStr = String.format(QUERY_FORMAT_UP_DROP,dateStr,dateStr);
-        JSONObject upDropJson = getWencaiJson(upDropStr);
-        JSONObject upDropResult = apiService.post(wencaiUrl,upDropJson);
-        pareUpDropResult(upDropResult,entity);
-
-        //跌停跌停
-        String dietingStr = String.format(QUERY_FORMAT_DIETING,dateStr);
-        JSONObject dietingJson = getWencaiJson(dietingStr);
-        JSONObject dietingResult = apiService.post(wencaiUrl,dietingJson);
-        pareDieTingResult(dietingResult,entity,dateStr);
-
+        //统计涨停信息
+        List<UpLimit> upLimits = queryUpLimit(entity,dateStr);
+        //统计上涨下跌
+        queryUpDrop(entity,dateStr);
+        //跌停
+        List<DropLimit> dropLimits = queryDropLimit(entity,dateStr);
         //炸板统计
-        String brokenStr = String.format(QUERY_FORMAT_BROKEN,dateStr);
-        JSONObject brokenJson = getWencaiJson(brokenStr);
-        JSONObject brokenResult = apiService.post(wencaiUrl,brokenJson);
-        parseBreakResult(brokenResult,entity,dateStr);
+        List<BrokenLimit> brokenLimits = queryBrokenLimit(entity,dateStr,true,true);
 
         //结果写入excel
         writeResult(entity,dateStr);
+        //写入mysql
+        if (upLimits.size()>0){
+            upLimitMapper.batchInsertOrUpdate(upLimits);
+        }
+        if (dropLimits.size()>0){
+            dropLimitMapper.batchInsertOrUpdate(dropLimits);
+        }
+        if (brokenLimits.size()>0){
+            brokenLimitMapper.batchInsertOrUpdate(brokenLimits);
+        }
 
         System.out.println(entity);
     }
@@ -169,7 +172,7 @@ public class WenCaiService {
     }
 
     /**
-     * 问财接口参数格式
+     * 问财股票接口参数格式
      * @param question
      * @return
      */
@@ -189,14 +192,38 @@ public class WenCaiService {
     }
 
     /**
+     * 问财指数接口参数格式
+     * @param question
+     * @return
+     */
+    private JSONObject getWencaiZhiShuJson(String question){
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("question",question);
+        jsonObject.put("perpage",500);
+        jsonObject.put("page",1);
+        jsonObject.put("secondary_intent","zhishu");
+        jsonObject.put("log_info","{\"input_type\":\"typewrite\"}");
+        jsonObject.put("source","Ths_iwencai_Xuangu");
+        jsonObject.put("version","2.0");
+        jsonObject.put("query_area","");
+        jsonObject.put("block_lisft","");
+        jsonObject.put("add_info","{\"urp\":{\"scene\":1,\"company\":1,\"business\":1},\"contentType\":\"json\",\"searchInfo\":true}");
+        return jsonObject;
+    }
+
+    /**
      * 解析涨停数据
-     * @param zhangtingResult
+     * @param date 2022-02-10
      * @param entity
      */
-    private void parseZhangtingResult(JSONObject zhangtingResult, WenCaiQueryEntity entity,String dateStr) throws IOException {
+    private List<UpLimit> queryUpLimit(WenCaiQueryEntity entity,String date) throws IOException {
         //2022-02-07 -> 20220207
 //        String dateStr = "2022-02-07";
-        dateStr = DateUtils.coverToUnSymbol(dateStr);
+        String dateStr = DateUtils.coverToUnSymbol(date);
+        String zhangtingStr = String.format(QUERY_FORMAT_ZHANGTING_FENXI,dateStr,dateStr);
+        JSONObject zhangtingJson = getWencaiJson(zhangtingStr);
+        JSONObject zhangtingResult = apiService.post(wencaiUrl,zhangtingJson);
+
 
         String field_limit_type = String.format(FIELD_LIMIT_TYPE_FORMAT,dateStr);
         String field_limit_reason = String.format(FIELD_LIMIT_REASON_FORMAT,dateStr);
@@ -233,9 +260,6 @@ public class WenCaiService {
             upLimit.setLastTime(js.getString(field_last_time));
             upLimit.setOpenCount(js.getInteger(field_open_count));
             lists.add(upLimit);
-        }
-        if (!lists.isEmpty()){
-            upLimitMapper.batchInsertOrUpdate(lists);
         }
 
         int totalCount = 0;
@@ -296,12 +320,17 @@ public class WenCaiService {
         entity.setThirdStr(thirdSb.toString());
         entity.setMoreStr(moreSb.toString());
 
+        return lists;
     }
 
     /**
      * 解析 上涨下跌数据
      */
-    private void pareUpDropResult(JSONObject upDropResult,WenCaiQueryEntity entity){
+    private void queryUpDrop(WenCaiQueryEntity entity,String dateStr){
+
+        String upDropStr = String.format(QUERY_FORMAT_UP_DROP,dateStr,dateStr);
+        JSONObject upDropJson = getWencaiJson(upDropStr);
+        JSONObject upDropResult = apiService.post(wencaiUrl,upDropJson);
 
         JSONObject dataJson = upDropResult.getJSONObject("data");
         JSONArray answerArray = dataJson.getJSONArray("answer");
@@ -327,11 +356,18 @@ public class WenCaiService {
 
     /**
      * 解析炸板数据
-     * @param breakResult
      * @param entity
+     * @param date  2022-02-10
+     * @param doesParseTheme 是否解析题材 默认true 解析
+     * @param doesParseLoseRate 是否解析亏损率
      * 非当庭数据不准确
      */
-    private void parseBreakResult(JSONObject breakResult,WenCaiQueryEntity entity,String date) throws ParseException {
+    private List<BrokenLimit> queryBrokenLimit(WenCaiQueryEntity entity,String date,boolean doesParseTheme,boolean doesParseLoseRate) throws ParseException {
+
+        String brokenStr = String.format(QUERY_FORMAT_BROKEN,date);
+        JSONObject brokenJson = getWencaiJson(brokenStr);
+        JSONObject brokenResult = apiService.post(wencaiUrl,brokenJson);
+
         String todayStr = DateUtils.getTodayStr();
         boolean isToday = StringUtils.equals(todayStr,date);
         String dateStr = DateUtils.coverToUnSymbol(date);
@@ -356,7 +392,7 @@ public class WenCaiService {
         String field_broken_last_time = String.format(FIELD_BROKEN_LAST_TIME_FORMAT,dateStr);
         String field_broken_close_price = FIELD_BROKEN_CLOSE_PRICE;
 
-        JSONObject dataJson = breakResult.getJSONObject("data");
+        JSONObject dataJson = brokenResult.getJSONObject("data");
         JSONArray answerArray = dataJson.getJSONArray("answer");
         JSONObject answerJson = answerArray.getJSONObject(0);
         JSONArray txtArray = answerJson.getJSONArray("txt");
@@ -368,9 +404,11 @@ public class WenCaiService {
         JSONArray c_data_datas_array = c_dataJson.getJSONArray("datas");
         entity.setBreakCount(c_data_datas_array.size());
 
+        List<BrokenLimit> lists = Lists.newArrayList();
+
         if (c_data_datas_array.size()>0){
             //破板统计
-            List<BrokenLimit> lists = Lists.newArrayList();
+
             for (int i=0;i<c_data_datas_array.size();i++){
                 JSONObject resultJson = c_data_datas_array.getJSONObject(i);
                 BrokenLimit limit = new BrokenLimit();
@@ -378,21 +416,24 @@ public class WenCaiService {
                 limit.setCloseTimeMin(resultJson.getString(field_broken_close_time_min));
                 limit.setOpenCount(resultJson.getInteger(field_broken_open_count));
                 //亏损率 最新涨跌幅-10
-                if (isToday){
-                    limit.setLossRate(resultJson.getFloat(field_broken_loss_rate)-10);
-                    limit.setClosePrice(resultJson.getFloat(field_broken_close_price));
-                }else{
-                    StockDetail stockDetail = stockDetailService.getDetailByStockCodeAndDate(resultJson.getString(field_broken_code),resultJson.getString(field_broken_name),dateStr);
-                    limit.setLossRate(stockDetail.getClosePriceRate().floatValue()-10);
-                    limit.setClosePrice(stockDetail.getClosePrice().floatValue());
+                if (doesParseLoseRate){
+                    if (isToday){
+                        limit.setLossRate(resultJson.getFloat(field_broken_loss_rate)-10);
+                        limit.setClosePrice(resultJson.getFloat(field_broken_close_price));
+                    }else{
+                        StockDetail stockDetail = stockDetailService.getDetailByStockCodeAndDate(resultJson.getString(field_broken_code),resultJson.getString(field_broken_name),dateStr);
+                        limit.setLossRate(stockDetail.getClosePriceRate().floatValue()-10);
+                        limit.setClosePrice(stockDetail.getClosePrice().floatValue());
+                    }
                 }
-
                 String timeDetail = resultJson.getString(field_broken_last_time);
                 String[] tdss = timeDetail.split("\\|\\|");
                 limit.setLastTime(tdss[tdss.length-1].trim());
                 limit.setFirstTime(resultJson.getString(field_broken_first_time).trim());
                 limit.setName(resultJson.getString(field_broken_name));
-                limit.setTheme(queryStockTheme(resultJson.getString(field_broken_name)));
+                if (doesParseTheme){
+                    limit.setTheme(queryStockTheme(resultJson.getString(field_broken_name)));
+                }
                 limit.setDate(dateStr);
 
                 //统计上个交易日涨停类型
@@ -413,28 +454,27 @@ public class WenCaiService {
         }else{
 
         }
-
-        System.out.println("xxx");
-
+        return lists;
     }
 
     /**
      * 解析跌停数据
-     * @param dietingResult
      * @param entity
-     * @param dateStr
+     * @param date 2022-02-10
      */
-    private void pareDieTingResult(JSONObject dietingResult, WenCaiQueryEntity entity,String dateStr){
+    private List<DropLimit> queryDropLimit(WenCaiQueryEntity entity,String date){
 
-        dateStr = DateUtils.coverToUnSymbol(dateStr);
+        String dateStr = DateUtils.coverToUnSymbol(date);
+
+        String dietingStr = String.format(QUERY_FORMAT_DIETING,dateStr);
+        JSONObject dietingJson = getWencaiJson(dietingStr);
+        JSONObject dietingResult = apiService.post(wencaiUrl,dietingJson);
 
         String field_drop_type = String.format(FIELD_DROP_TYPE_FORMAT,dateStr);
         String field_drop_season = String.format(FIELD_DROP_SEASON_FORMAT,dateStr);
         String field_drop_code = FIELD_DROP_CODE;
         String field_drop_name = FIELD_DROP_NAME;
         String field_drop_sequence_count = String.format(FIELD_DROP_SEQUENCE_COUNT_FORMAT,dateStr);
-
-
 
         JSONObject dataJson = dietingResult.getJSONObject("data");
 
@@ -449,10 +489,11 @@ public class WenCaiService {
         JSONArray c_data_datas_array = c_dataJson.getJSONArray("datas");
 
         entity.setDropLimitCount(c_data_datas_array.size());
+        List<DropLimit> lists = Lists.newArrayList();
 
         if (c_data_datas_array.size()>0){
             //有跌停
-            List<DropLimit> lists = Lists.newArrayList();
+
             for (int i=0;i<c_data_datas_array.size();i++){
                 JSONObject resultJson = c_data_datas_array.getJSONObject(i);
                 DropLimit dropLimit = new DropLimit();
@@ -464,8 +505,8 @@ public class WenCaiService {
                 dropLimit.setDate(dateStr);
                 lists.add(dropLimit);
             }
-            dropLimitMapper.batchInsertOrUpdate(lists);
         }
+        return lists;
     }
 
     /**
