@@ -15,16 +15,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import wei.tools.dao.BrokenLimitMapper;
-import wei.tools.dao.DropLimitMapper;
 import wei.tools.dao.UpLimitMapper;
-import wei.tools.entity.WenCaiQueryEntity;
-import wei.tools.exception.ToolsException;
-import wei.tools.model.BrokenLimit;
-import wei.tools.model.DropLimit;
-import wei.tools.model.StockDetail;
-import wei.tools.model.UpLimit;
+import wei.tools.model.*;
 import wei.tools.util.DateUtils;
+import wei.tools.util.DecimalUtils;
 
 import java.io.*;
 import java.text.ParseException;
@@ -85,6 +79,11 @@ public class WenCaiService {
     private static String FIELD_BROKEN_LAST_TIME_FORMAT = "涨停时间明细[%s]";
     private static String FIELD_BROKEN_CLOSE_PRICE = "最新价";
 
+    //板块字段
+    private static String FIELD_BUSINESS_NAME = "指数简称";
+    private static String FIELD_BUSINESS_ROSE_FORMAT = "指数@涨跌幅:前复权[%s]";
+    private static String FIELD_BUSINESS_LIMIT_FORMAT = "指数@涨停家数[%s]";
+
     //上涨下跌提取
     private static Pattern upDropCountPattern = Pattern.compile("\\((\\d+)+\\).*\\((\\d+)+\\)");
 
@@ -98,50 +97,7 @@ public class WenCaiService {
     @Autowired
     private UpLimitMapper upLimitMapper;
     @Autowired
-    private DropLimitMapper dropLimitMapper;
-    @Autowired
-    private BrokenLimitMapper brokenLimitMapper;
-    @Autowired
     private TradingDayService tradingDayService;
-
-    /**
-     * 每日复盘
-     * @param dateStr
-     * @throws IOException
-     */
-    public void reviewByDate(String dateStr) throws IOException, ParseException {
-
-        DateUtils.checkFormat(dateStr);
-        if (!tradingDayService.isTradingDay(dateStr)){
-            throw new ToolsException("查询日期为非交易日!");
-        }
-
-        WenCaiQueryEntity entity = new WenCaiQueryEntity();
-        //统计涨停信息
-        List<UpLimit> upLimits = queryUpLimit(entity,dateStr);
-        //统计上涨下跌
-        queryUpDrop(entity,dateStr);
-        //跌停
-        List<DropLimit> dropLimits = queryDropLimit(entity,dateStr);
-        //炸板统计
-        List<BrokenLimit> brokenLimits = queryBrokenLimit(entity,dateStr,true,true);
-
-        //结果写入excel
-        writeResult(entity,dateStr);
-        //写入mysql
-        if (upLimits.size()>0){
-            upLimitMapper.batchInsertOrUpdate(upLimits);
-        }
-        if (dropLimits.size()>0){
-            dropLimitMapper.batchInsertOrUpdate(dropLimits);
-        }
-        if (brokenLimits.size()>0){
-            brokenLimitMapper.batchInsertOrUpdate(brokenLimits);
-        }
-
-        System.out.println(entity);
-    }
-
 
     /**
      * 获取题材
@@ -212,11 +168,67 @@ public class WenCaiService {
     }
 
     /**
+     * 统计行业指数
+     * @param emotionalCycle
+     * @param date
+     */
+    public void queryHotBusiness(EmotionalCycle emotionalCycle, String date){
+
+        //安涨停个数统计
+        String byUpLimitStr = String.format(QUERY_FORMAT_BUSINESS_UPLIMIT,date,date);
+        JSONObject upLimitJson = getWencaiZhiShuJson(byUpLimitStr);
+        JSONObject upLimitResultJson = apiService.post(wencaiUrl,upLimitJson);
+
+        String dateStr = DateUtils.coverToUnSymbol(date);
+
+        String field_business_name = FIELD_BUSINESS_NAME;
+        String field_business_rose = String.format(FIELD_BUSINESS_ROSE_FORMAT,dateStr);
+        String field_business_limit = String.format(FIELD_BUSINESS_LIMIT_FORMAT,dateStr);
+
+        JSONObject dataJson = upLimitResultJson.getJSONObject("data");
+        JSONArray c_data_datas_array = parseToDatas(dataJson);
+
+        int count = 0;
+        StringBuilder resultSb = new StringBuilder();
+        //TODO 暂时取前5,具体逻辑没想好
+        for (int i=0;i<c_data_datas_array.size();i++){
+            if (count<5){
+                JSONObject resultJson = c_data_datas_array.getJSONObject(i);
+                String name = resultJson.getString(field_business_name);
+//                float rose = DecimalUtils.roundValue(resultJson.getFloat(field_business_rose));
+                String limits = resultJson.getString(field_business_limit);
+                resultSb.append(name).append(":").append(limits).append(",");
+                count++;
+            }else{
+                break;
+            }
+        }
+        if (resultSb.indexOf(",")!=-1){
+            resultSb.delete(resultSb.lastIndexOf(","),resultSb.length());
+        }
+        emotionalCycle.setHotBusinessOrderLimit(resultSb.toString());
+
+    }
+
+    private JSONArray parseToDatas(JSONObject dataJson ){
+        JSONArray answerArray = dataJson.getJSONArray("answer");
+        JSONObject answerJson = answerArray.getJSONObject(0);
+        JSONArray txtArray = answerJson.getJSONArray("txt");
+        JSONObject txtJson = txtArray.getJSONObject(0);
+        JSONObject contentJson = txtJson.getJSONObject("content");
+        JSONArray componentsArray = contentJson.getJSONArray("components");
+        JSONObject componentJson = componentsArray.getJSONObject(0);
+        JSONObject c_dataJson = componentJson.getJSONObject("data");
+        JSONArray c_data_datas_array = c_dataJson.getJSONArray("datas");
+        return c_data_datas_array;
+    }
+
+    /**
      * 解析涨停数据
      * @param date 2022-02-10
-     * @param entity
+     * @param emotionalCycle
      */
-    private List<UpLimit> queryUpLimit(WenCaiQueryEntity entity,String date) throws IOException {
+    public List<UpLimit> queryUpLimit(EmotionalCycle emotionalCycle,String date) throws IOException {
         //2022-02-07 -> 20220207
 //        String dateStr = "2022-02-07";
         String dateStr = DateUtils.coverToUnSymbol(date);
@@ -253,7 +265,12 @@ public class WenCaiService {
             upLimit.setDate(dateStr);
             upLimit.setLimitType(js.getString(field_limit_type));
             upLimit.setReason(StringUtils.isBlank(js.getString(field_limit_reason))?"-":js.getString(field_limit_reason));
-            upLimit.setCode(js.getString(field_code));
+            String code = js.getString(field_code);
+            if (StringUtils.isBlank(code)){
+                continue;
+            }
+            code = code.substring(0,6);
+            upLimit.setCode(code);
             upLimit.setSequenceType(js.getString(field_sequence_type));
             upLimit.setSequenceCount(js.getInteger(field_sequence_count));
             upLimit.setName(js.getString(field_name));
@@ -312,13 +329,13 @@ public class WenCaiService {
             moreSb.delete(moreSb.lastIndexOf("、"),moreSb.length());
         }
 
-        entity.setUpLimitCount(totalCount);
-        entity.setFirstCount(firstCount);
-        entity.setSecondCount(secondCount);
-        entity.setThirdCount(thirdCount);
-        entity.setMoreCount(moreCount);
-        entity.setThirdStr(thirdSb.toString());
-        entity.setMoreStr(moreSb.toString());
+        emotionalCycle.setUpLimit(totalCount);
+        emotionalCycle.setFirstLimit(firstCount);
+        emotionalCycle.setSecondLimit(secondCount);
+        emotionalCycle.setThirdLimit(thirdCount);
+        emotionalCycle.setMoreLimit(moreCount);
+        emotionalCycle.setThirdLimitStr(thirdSb.toString());
+        emotionalCycle.setMoreLimitStr(moreSb.toString());
 
         return lists;
     }
@@ -326,7 +343,7 @@ public class WenCaiService {
     /**
      * 解析 上涨下跌数据
      */
-    private void queryUpDrop(WenCaiQueryEntity entity,String dateStr){
+    public void queryUpDrop(EmotionalCycle emotionalCycle,String dateStr){
 
         String upDropStr = String.format(QUERY_FORMAT_UP_DROP,dateStr,dateStr);
         JSONObject upDropJson = getWencaiJson(upDropStr);
@@ -349,20 +366,20 @@ public class WenCaiService {
         if (matcher.find()){
             System.out.println(matcher.group(1));
             System.out.println(matcher.group(2));
-            entity.setUpCount(Integer.valueOf(matcher.group(1)));
-            entity.setDropCount(Integer.valueOf(matcher.group(2)));
+            emotionalCycle.setUpCount(Integer.valueOf(matcher.group(1)));
+            emotionalCycle.setDropCount(Integer.valueOf(matcher.group(2)));
         }
     }
 
     /**
      * 解析炸板数据
-     * @param entity
+     * @param emotionalCycle
      * @param date  2022-02-10
      * @param doesParseTheme 是否解析题材 默认true 解析
      * @param doesParseLoseRate 是否解析亏损率
      * 非当庭数据不准确
      */
-    private List<BrokenLimit> queryBrokenLimit(WenCaiQueryEntity entity,String date,boolean doesParseTheme,boolean doesParseLoseRate) throws ParseException {
+    public List<BrokenLimit> queryBrokenLimit(EmotionalCycle emotionalCycle,String date,boolean doesParseTheme,boolean doesParseLoseRate) throws ParseException {
 
         String brokenStr = String.format(QUERY_FORMAT_BROKEN,date);
         JSONObject brokenJson = getWencaiJson(brokenStr);
@@ -402,7 +419,7 @@ public class WenCaiService {
         JSONObject componentJson = componentsArray.getJSONObject(0);
         JSONObject c_dataJson = componentJson.getJSONObject("data");
         JSONArray c_data_datas_array = c_dataJson.getJSONArray("datas");
-        entity.setBreakCount(c_data_datas_array.size());
+        emotionalCycle.setBrokenLimit(c_data_datas_array.size());
 
         List<BrokenLimit> lists = Lists.newArrayList();
 
@@ -449,8 +466,6 @@ public class WenCaiService {
                 lists.add(limit);
             }
 
-            brokenLimitMapper.batchInsertOrUpdate(lists);
-
         }else{
 
         }
@@ -459,10 +474,10 @@ public class WenCaiService {
 
     /**
      * 解析跌停数据
-     * @param entity
+     * @param emotionalCycle
      * @param date 2022-02-10
      */
-    private List<DropLimit> queryDropLimit(WenCaiQueryEntity entity,String date){
+    public List<DropLimit> queryDropLimit(EmotionalCycle emotionalCycle,String date){
 
         String dateStr = DateUtils.coverToUnSymbol(date);
 
@@ -488,7 +503,7 @@ public class WenCaiService {
         JSONObject c_dataJson = componentJson.getJSONObject("data");
         JSONArray c_data_datas_array = c_dataJson.getJSONArray("datas");
 
-        entity.setDropLimitCount(c_data_datas_array.size());
+        emotionalCycle.setDropLimit(c_data_datas_array.size());
         List<DropLimit> lists = Lists.newArrayList();
 
         if (c_data_datas_array.size()>0){
@@ -499,7 +514,12 @@ public class WenCaiService {
                 DropLimit dropLimit = new DropLimit();
                 dropLimit.setLimitType(resultJson.getString(field_drop_type));
                 dropLimit.setReason(resultJson.getString(field_drop_season));
-                dropLimit.setCode(resultJson.getString(field_drop_code));
+                String code = resultJson.getString(field_drop_code);
+                if (StringUtils.isBlank(code)){
+                    continue;
+                }
+                code = code.substring(0,6);
+                dropLimit.setCode(code);
                 dropLimit.setName(resultJson.getString(field_drop_name));
                 dropLimit.setSequenceCount(resultJson.getInteger(field_drop_sequence_count));
                 dropLimit.setDate(dateStr);
@@ -512,7 +532,7 @@ public class WenCaiService {
     /**
      * 结果写入excel
      */
-    public void writeResult(WenCaiQueryEntity entity,String dateStr) throws IOException {
+    public void writeResult(EmotionalCycle emotionalCycle,String dateStr) throws IOException {
 
         String[] dss = dateStr.split("-");
         String dateExStr = dss[1]+"."+dss[2];
@@ -585,23 +605,23 @@ public class WenCaiService {
         //红盘
         Cell cell2 = insertRow.createCell(1);
         cell2.setCellStyle(sheet.getColumnStyle(1));
-        cell2.setCellValue(entity.getUpCount());
+        cell2.setCellValue(emotionalCycle.getUpCount());
         //绿盘
         Cell cell3 = insertRow.createCell(2);
         cell3.setCellStyle(sheet.getColumnStyle(2));
-        cell3.setCellValue(entity.getDropCount());
+        cell3.setCellValue(emotionalCycle.getDropCount());
         //涨停
         Cell cell4 = insertRow.createCell(3);
         cell4.setCellStyle(sheet.getColumnStyle(1));
-        cell4.setCellValue(entity.getUpLimitCount());
+        cell4.setCellValue(emotionalCycle.getUpLimit());
         //跌停
         Cell cell5 = insertRow.createCell(4);
         cell5.setCellStyle(sheet.getColumnStyle(4));
-        cell5.setCellValue(entity.getDropLimitCount());
+        cell5.setCellValue(emotionalCycle.getDropLimit());
         //炸板
         Cell cell6 = insertRow.createCell(5);
         cell6.setCellStyle(sheet.getColumnStyle(5));
-        cell6.setCellValue(entity.getBreakCount());
+        cell6.setCellValue(emotionalCycle.getBrokenLimit());
         //cell7 炸板率excel自己计算
         Cell cell7 = insertRow.createCell(6);
         cell7.setCellStyle(sheet.getColumnStyle(6));
@@ -615,23 +635,28 @@ public class WenCaiService {
         //2板
         Cell cell9 = insertRow.createCell(8);
         cell9.setCellStyle(sheet.getColumnStyle(8));
-        cell9.setCellValue(entity.getSecondCount());
+        cell9.setCellValue(emotionalCycle.getSecondLimit());
         //3板个数
         Cell cell10 = insertRow.createCell(9);
         cell10.setCellStyle(sheet.getColumnStyle(9));
-        cell10.setCellValue(entity.getThirdCount());
+        cell10.setCellValue(emotionalCycle.getThirdLimit());
         //3板详情
         Cell cell11 = insertRow.createCell(10);
         cell11.setCellStyle(sheet.getColumnStyle(10));
-        cell11.setCellValue(entity.getThirdStr());
+        cell11.setCellValue(emotionalCycle.getThirdLimitStr());
         //3板以上
         Cell cell12 = insertRow.createCell(11);
         cell12.setCellStyle(sheet.getColumnStyle(11));
-        cell12.setCellValue(entity.getMoreCount());
+        cell12.setCellValue(emotionalCycle.getMoreLimit());
         //3板以上详情
         Cell cell13 = insertRow.createCell(12);
         cell13.setCellStyle(sheet.getColumnStyle(12));
-        cell13.setCellValue(entity.getMoreStr());
+        cell13.setCellValue(emotionalCycle.getMoreLimitStr());
+        //热门板块
+        Cell cell14 = insertRow.createCell(13);
+        cell14.setCellStyle(sheet.getColumnStyle(13));
+        cell14.setCellValue(emotionalCycle.getHotBusinessOrderLimit());
+
 
         formulaEvaluator.evaluateAll();
 
@@ -643,20 +668,16 @@ public class WenCaiService {
     public static void main(String[] args) throws IOException {
 
         String todayStr = DateUtils.getTodayStr();
-        String dateStr = "2022-02-10";
-        boolean isToday = StringUtils.equals(todayStr,dateStr);
+        String dateStr = "2022-02-16";
 
         dateStr = DateUtils.coverToUnSymbol(dateStr);
 
-        String field_broken_code = FIELD_BROKEN_CODE;
-        String field_broken_close_time_min = String.format(FIELD_BROKEN_CLOSE_TIME_MIN_FORMAT,dateStr);
-        String field_broken_open_count = String.format(FIELD_BROKEN_OPEN_COUNT_FORMAT,dateStr);
-        String field_broken_loss_rate = FIELD_BROKEN_LOSS_RATE;
-        String field_broken_name = FIELD_BROKEN_NAME;
-        String field_broken_first_time = String.format(FIELD_BROKEN_FIRST_TIME_FORMAT,dateStr);
-        String field_broken_last_time = String.format(FIELD_BROKEN_LAST_TIME_FORMAT,dateStr);
+        String field_business_name = FIELD_BUSINESS_NAME;
+        String field_business_rose = String.format(FIELD_BUSINESS_ROSE_FORMAT,dateStr);
+        String field_business_limit = String.format(FIELD_BUSINESS_LIMIT_FORMAT,dateStr);
 
-        File file = new File("D:\\dd.txt");
+
+        File file = new File("D:\\ee.txt");
         BufferedReader br = new BufferedReader(new FileReader(file));
 
         StringBuilder sb = new StringBuilder();
@@ -675,35 +696,20 @@ public class WenCaiService {
         JSONObject c_dataJson = componentJson.getJSONObject("data");
         JSONArray c_data_datas_array = c_dataJson.getJSONArray("datas");
 
-        if (c_data_datas_array.size()>0){
-            //破板统计
-            List<BrokenLimit> lists = Lists.newArrayList();
-            for (int i=0;i<c_data_datas_array.size();i++){
+        int count = 0;
+        StringBuilder resultSb = new StringBuilder();
+        //TODO 暂时取前5,具体逻辑没想好
+        for (int i=0;i<c_data_datas_array.size();i++){
+            if (count<5){
                 JSONObject resultJson = c_data_datas_array.getJSONObject(i);
-                BrokenLimit limit = new BrokenLimit();
-                limit.setCode(resultJson.getString(field_broken_code));
-                limit.setCloseTimeMin(resultJson.getString(field_broken_close_time_min));
-                limit.setOpenCount(resultJson.getInteger(field_broken_open_count));
-                //亏损率 最新涨跌幅-10
-                limit.setLossRate(resultJson.getFloat(field_broken_loss_rate)-10);
-                String timeDetail = resultJson.getString(field_broken_last_time);
-                String[] tdss = timeDetail.split("\\|\\|");
-                limit.setLastTime(tdss[tdss.length-1].trim());
-                limit.setFirstTime(resultJson.getString(field_broken_first_time).trim());
-                limit.setName(resultJson.getString(field_broken_name));
-                //TODO 主题抓取
-                limit.setTheme("");
-                limit.setDate(dateStr);
-
-                lists.add(limit);
+                String name = resultJson.getString(field_business_name);
+                float rose = DecimalUtils.roundValue(resultJson.getFloat(field_business_rose));
+                String limits = resultJson.getString(field_business_limit);
+                resultSb.append(name).append("[").append(limits).append(",").append(rose).append("%]").append("、");
+                count++;
+            }else{
+                break;
             }
-
-            for (BrokenLimit limit : lists){
-                System.out.println(limit);
-            }
-
-        }else{
-            //无跌停
         }
 
     }

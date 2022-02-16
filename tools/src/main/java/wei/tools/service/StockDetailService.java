@@ -2,6 +2,9 @@ package wei.tools.service;
 
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.google.common.collect.Lists;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import wei.tools.dao.StockDetailMapper;
@@ -10,6 +13,8 @@ import wei.tools.model.StockDetail;
 
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @Author: weiyanan
@@ -17,6 +22,8 @@ import java.text.DecimalFormat;
  */
 @Service
 public class StockDetailService {
+
+    private static Logger logger = LoggerFactory.getLogger(StockDetailService.class);
 
     private DecimalFormat df = new DecimalFormat("#.00");;
 
@@ -27,10 +34,17 @@ public class StockDetailService {
     @Autowired
     private StockDetailMapper stockDetailMapper;
 
+    /**
+     * 个股股价详情
+     * @param stockCode
+     * @param stockName
+     * @param dateUnSymbolStr 无符号
+     * @return
+     */
+    public StockDetail getDetailByStockCodeAndDate(String stockCode,String stockName, String dateUnSymbolStr){
 
-    public StockDetail getDetailByStockCodeAndDate(String stockCode,String stockName, String dateStr){
-        stockCode = "cn_" + stockCode;
-        String url = String.format(URL_QUERY_HISTORY,stockCode,dateStr,dateStr);
+        String queryCode = "cn_" + stockCode;
+        String url = String.format(URL_QUERY_HISTORY,queryCode,dateUnSymbolStr,dateUnSymbolStr);
         String resultStr = apiService.get(url,String.class);
         JSONArray resultArray = JSONArray.parseArray(resultStr);
         JSONObject resultJson = resultArray.getJSONObject(0);
@@ -60,7 +74,7 @@ public class StockDetailService {
 
         stockDetail.setCode(stockCode);
         stockDetail.setName(stockName);
-        stockDetail.setDateStr(dateStr);
+        stockDetail.setDateStr(dateUnSymbolStr);
         stockDetail.setOpenPrice(getBigDecimal(openPrice));
         stockDetail.setOpenPriceRate(getBigDecimal(openPriceRateCal));
         stockDetail.setClosePrice(getBigDecimal(closePrice));
@@ -77,9 +91,34 @@ public class StockDetailService {
         return stockDetail;
     }
 
+    /**
+     * 批量获取股价
+     * @param codes
+     * @param codeNameMap code->name
+     * @param dateStr
+     * @return
+     */
+    public List<StockDetail> getDetailsByDate(List<String> codes, Map<String,String> codeNameMap, String dateStr){
+
+        List<StockDetail> results = Lists.newArrayList();
+        if (codeNameMap==null || codeNameMap.size()==0){
+            throw new ToolsException("stock name to name map is empty！");
+        }
+
+        for (String code : codes){
+            if (!codeNameMap.containsKey(code)){
+                logger.warn("获取{}股价出现异常!",code);
+                continue;
+            }
+            results.add(getDetailByStockCodeAndDate(code,codeNameMap.get(code),dateStr));
+        }
+        return results;
+    }
+
     private BigDecimal getBigDecimal(Float number){
         return new BigDecimal(number).setScale(2,BigDecimal.ROUND_HALF_UP);
     }
+
 
     public static void main(String[] args) {
 

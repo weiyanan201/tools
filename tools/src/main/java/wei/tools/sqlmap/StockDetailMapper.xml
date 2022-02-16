@@ -38,4 +38,23 @@
     turnover_rate, swing_rate, last_day_close_price
     from t_stock_detail
   </select>
+
+  <insert id="batchInsertOrUpdate">
+    insert into t_stock_detail (code, name, date_str,
+      open_price, open_price_rate, close_price,
+      close_price_rate, diff_price,
+      min_price, min_price_rate, max_price,
+      max_price_rate, turnover_rate, swing_rate,
+      last_day_close_price)
+    values
+    <foreach collection="records" index="index" item="record" separator=",">
+      (#{record.code},#{record.name},#{record.dateStr},#{record.openPrice},#{record.openPriceRate},#{record.closePrice},#{record.closePriceRate}
+      ,#{record.diffPrice},#{record.minPrice},#{record.minPriceRate},#{record.maxPrice},#{record.maxPriceRate}
+      ,#{record.turnoverRate},#{record.swingRate},#{record.lastDayClosePrice})
+    </foreach>
+    ON DUPLICATE KEY UPDATE code=values(code),name=values(name),date_str=values(date_str),open_price=values(open_price),open_price_rate=values(open_price_rate)
+    ,close_price=values(close_price),close_price_rate=values(close_price_rate),diff_price=values(diff_price),min_price=values(min_price)
+    ,min_price_rate=values(min_price_rate),max_price=values(max_price),max_price_rate=values(max_price_rate),turnover_rate=values(turnover_rate),swing_rate=values(swing_rate)
+    ,last_day_close_price=values(last_day_close_price)
+  </insert>
 </mapper>

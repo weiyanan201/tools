@@ -64,4 +64,11 @@
     ,open_count=values(open_count),close_time_min=values(close_time_min),theme=values(theme),loss_rate=values(loss_rate),close_price=values(close_price)
     ,broken_limit_type=values(broken_limit_type)
   </insert>
+
+  <select id="selectByDateStr" parameterType="java.lang.String" resultMap="BaseResultMap">
+    select id, code, name, first_time, last_time, date, open_count, close_time_min,
+    theme, loss_rate,close_price,broken_limit_type
+    from t_broken_limit
+    where date = #{dateStr,jdbcType=VARCHAR}
+  </select>
 </mapper>

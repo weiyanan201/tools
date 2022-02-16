@@ -1,10 +1,9 @@
 package wei.tools.dao;
 
-import java.util.List;
-
 import org.apache.ibatis.annotations.Param;
 import wei.tools.model.BrokenLimit;
-import wei.tools.model.UpLimit;
+
+import java.util.List;
 
 public interface BrokenLimitMapper {
     int insert(BrokenLimit record);
@@ -16,4 +15,6 @@ public interface BrokenLimitMapper {
     int updateByPrimaryKey(BrokenLimit record);
 
     void batchInsertOrUpdate(@Param("records") List<BrokenLimit> records);
+
+    List<BrokenLimit> selectByDateStr(@Param("dateStr")String dateStr);
 }
