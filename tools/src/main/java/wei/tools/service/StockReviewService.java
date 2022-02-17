@@ -2,12 +2,16 @@ package wei.tools.service;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import wei.tools.dao.*;
 import wei.tools.exception.ToolsException;
 import wei.tools.model.*;
 import wei.tools.util.DateUtils;
+import wei.tools.util.DecimalUtils;
 
 import java.io.IOException;
 import java.text.ParseException;
@@ -22,12 +26,16 @@ import java.util.Map;
 @Service
 public class StockReviewService {
 
+    private static Logger logger = LoggerFactory.getLogger(StockReviewService.class);
+
     @Autowired
     private WenCaiService wenCaiService;
     @Autowired
     private StockDetailService stockDetailService;
     @Autowired
     private TradingDayService tradingDayService;
+    @Autowired
+    private ExcelService excelService;
     @Autowired
     private UpLimitMapper upLimitMapper;
     @Autowired
@@ -39,12 +47,15 @@ public class StockReviewService {
     @Autowired
     private StockDetailMapper stockDetailMapper;
 
+    public void reviewByDate(String dateStr) throws IOException, ParseException {
+        reviewByDate(dateStr,false);
+    }
     /**
      * 每日复盘
      * 爬数据、计算、预测、推荐
      * @param dateStr 2022-02-10
      */
-    public void reviewByDate(String dateStr) throws IOException, ParseException {
+    public void reviewByDate(String dateStr,boolean isHistory) throws IOException, ParseException {
         DateUtils.checkFormat(dateStr);
         String dateUnSymbolStr = DateUtils.coverToUnSymbol(dateStr);
 
@@ -54,17 +65,18 @@ public class StockReviewService {
         //step1 情绪周期表统计
         EmotionalCycle emotionalCycle = new EmotionalCycle(dateStr);
         //统计涨停信息
-        List<UpLimit> upLimits = wenCaiService.queryUpLimit(emotionalCycle,dateStr);
+        List<UpLimit> upLimits = wenCaiService.queryUpLimit(emotionalCycle,dateStr,isHistory);
         //统计上涨下跌
         wenCaiService.queryUpDrop(emotionalCycle,dateStr);
         //跌停
-        List<DropLimit> dropLimits = wenCaiService.queryDropLimit(emotionalCycle,dateStr);
+        List<DropLimit> dropLimits = wenCaiService.queryDropLimit(emotionalCycle,dateStr,isHistory);
         //炸板统计
-        List<BrokenLimit> brokenLimits = wenCaiService.queryBrokenLimit(emotionalCycle,dateStr,true,true);
+        List<BrokenLimit> brokenLimits = wenCaiService.queryBrokenLimit(emotionalCycle,dateStr,isHistory);
         //查询板块
         wenCaiService.queryHotBusiness(emotionalCycle,dateStr);
         //结果写入excel
-        wenCaiService.writeResult(emotionalCycle,dateStr);
+        excelService.writeEmotionCycleResult(emotionalCycle,dateStr);
+
         //写入mysql
         if (upLimits.size()>0){
             upLimitMapper.batchInsertOrUpdate(upLimits);
@@ -80,26 +92,52 @@ public class StockReviewService {
         //step2 爬上个交易日涨停、炸板个股当日的股价详情
 
         String lastTradingDay = tradingDayService.getLastTradingDay(dateStr);
-        String lastTradingUnSymbol = DateUtils.coverToUnSymbol(lastTradingDay);
+        //防止没有历史数据而报错
+        if (!StringUtils.isBlank(lastTradingDay)){
+            List<StockDetail> stockDetails = crawlerStockDetails(dateStr,lastTradingDay);
+            if (stockDetails.size()>0){
+                stockDetailMapper.batchInsertOrUpdate(stockDetails);
+            }
+        }
 
-        Map<String,String> codeNameMap = Maps.newHashMap();
+        logger.info("-----------------reviewByDate : {} 已完成--------------------------",dateStr);
+
+
+    }
+
+    /**
+     * 涨停、炸板的股价详情
+     * @param lastDateStr 个股范围挑选日
+     * @param dateStr 该日这些个股的股价
+     * @return
+     */
+    public List<StockDetail> crawlerStockDetails(String lastDateStr,String dateStr){
+        //
+        String lastDateStrUnSymbol = DateUtils.coverToUnSymbol(lastDateStr);
+        String dateStrUnSymbol = DateUtils.coverToUnSymbol(dateStr);
+
         List<String> lastDayCodes = Lists.newArrayList();
+        Map<String,String> codeNameMap = Maps.newHashMap();
 
-        List<UpLimit> lastUpLimits = upLimitMapper.selectByDateStr(lastTradingUnSymbol);
+        List<UpLimit> lastUpLimits = upLimitMapper.selectByDateStr(lastDateStrUnSymbol);
         for (UpLimit upLimit : lastUpLimits){
             lastDayCodes.add(upLimit.getCode());
             codeNameMap.put(upLimit.getCode(),upLimit.getName());
         }
-        List<BrokenLimit> lastBrokenLimits = brokenLimitMapper.selectByDateStr(lastTradingUnSymbol);
+        List<BrokenLimit> lastBrokenLimits = brokenLimitMapper.selectByDateStr(lastDateStrUnSymbol);
         for (BrokenLimit brokenLimit : lastBrokenLimits){
             lastDayCodes.add(brokenLimit.getCode());
             codeNameMap.put(brokenLimit.getCode(),brokenLimit.getName());
         }
-        List<StockDetail> stockDetails = stockDetailService.getDetailsByDate(lastDayCodes,codeNameMap,dateUnSymbolStr);
-        stockDetailMapper.batchInsertOrUpdate(stockDetails);
-
+        return stockDetailService.getDetailsByDate(lastDayCodes,codeNameMap,dateStrUnSymbol);
     }
 
+    /**
+     * 盘中情绪监控
+     * @param dateStr
+     * @throws IOException
+     * @throws ParseException
+     */
     public void openingQuery(String dateStr) throws IOException, ParseException {
         DateUtils.checkFormat(dateStr);
         if (!tradingDayService.isTradingDay(dateStr)){
@@ -114,7 +152,7 @@ public class StockReviewService {
         //跌停
         wenCaiService.queryDropLimit(emotionalCycle,dateStr);
         //炸板统计
-        wenCaiService.queryBrokenLimit(emotionalCycle,dateStr,false,false);
+        wenCaiService.queryBrokenLimitWithoutParse(emotionalCycle,dateStr);
         //热门板块
         wenCaiService.queryHotBusiness(emotionalCycle,dateStr);
 

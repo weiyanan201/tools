@@ -37,8 +37,7 @@ class ToolsApplicationTests {
 
 	@Test
 	void testStockEntity(){
-		StockDetail entity = stockDetailService.getDetailByStockCodeAndDate("002235","安妮股份","20220211");
-		System.out.println(entity);
+		System.out.println(wenCaiService.isST("603996","st中新","20210104"));
 	}
 
 
@@ -49,7 +48,8 @@ class ToolsApplicationTests {
 	 */
 	@Test
 	public void reviewByDate() throws IOException, ParseException {
-		stockReviewService.reviewByDate("2022-02-16");
+		stockReviewService.reviewByDate("2021-01-05");
+
 	}
 
 	/**
@@ -59,6 +59,6 @@ class ToolsApplicationTests {
 	 */
 	@Test
 	public void testOpeningQuery() throws IOException, ParseException {
-		stockReviewService.openingQuery("2022-02-16");
+		stockReviewService.openingQuery("2022-02-17");
 	}
 }

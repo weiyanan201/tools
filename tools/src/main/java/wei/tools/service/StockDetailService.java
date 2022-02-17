@@ -36,6 +36,7 @@ public class StockDetailService {
 
     /**
      * 个股股价详情
+     * 当日股价要在16:30后才有数据
      * @param stockCode
      * @param stockName
      * @param dateUnSymbolStr 无符号
@@ -102,7 +103,7 @@ public class StockDetailService {
 
         List<StockDetail> results = Lists.newArrayList();
         if (codeNameMap==null || codeNameMap.size()==0){
-            throw new ToolsException("stock name to name map is empty！");
+            throw new ToolsException("stock code to name map is empty！");
         }
 
         for (String code : codes){
@@ -110,7 +111,12 @@ public class StockDetailService {
                 logger.warn("获取{}股价出现异常!",code);
                 continue;
             }
-            results.add(getDetailByStockCodeAndDate(code,codeNameMap.get(code),dateStr));
+            try{
+                results.add(getDetailByStockCodeAndDate(code,codeNameMap.get(code),dateStr));
+            }catch (Exception exception){
+                logger.warn("获取{}-{}股价出现异常!",dateStr,code);
+            }
+
         }
         return results;
     }

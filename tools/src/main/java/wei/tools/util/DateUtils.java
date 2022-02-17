@@ -1,5 +1,6 @@
 package wei.tools.util;
 
+import org.apache.commons.lang3.StringUtils;
 import wei.tools.exception.ToolsException;
 
 import java.text.DateFormat;
@@ -27,6 +28,9 @@ public class DateUtils {
     }
 
     public static String coverToUnSymbol(String dateStr){
+        if (StringUtils.isBlank(dateStr)){
+            return null;
+        }
         return dateStr.replaceAll("-","");
     }
 
@@ -43,6 +47,24 @@ public class DateUtils {
             return true;
         }
         throw new ToolsException("日期格式不正确，请传入yyyy-MM-dd 格式");
+    }
+
+    /**
+     * 获取下个日期的日子
+     * @param dateStr
+     * @return
+     * @throws ParseException
+     */
+    public static String getNextDay(String dateStr) throws ParseException {
+
+        DateFormat dateFormat = new SimpleDateFormat(dateFormatStr);
+        Date date = dateFormat.parse(dateStr);
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+
+        calendar.add(Calendar.DAY_OF_MONTH,1);
+
+        return dateFormat.format(calendar.getTime());
     }
 
     /**
@@ -77,8 +99,8 @@ public class DateUtils {
 //            System.out.println(matcher.group(2));
 //        }
 
-        int d = diffBetweenDays("2021-01-03","2022-01-03");
-        System.out.println(d);
+
+        System.out.println(DateUtils.getNextDay("2021-01-31"));
 
     }
 

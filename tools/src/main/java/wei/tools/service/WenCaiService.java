@@ -37,11 +37,17 @@ public class WenCaiService {
 
     private static Logger logger = LoggerFactory.getLogger(WenCaiService.class);
 
-
-    public static String QUERY_FORMAT_ZHANGTING_FENXI= "%s涨停;非st;非新股；%s连续涨停天数>=1；上市时间超过50天";
+    //情绪周期表维度
+    public static String QUERY_FORMAT_ZHANGTING= "%s涨停;非st;非新股；%s连续涨停天数>=1；上市时间超过50天";
     public static String QUERY_FORMAT_UP_DROP = "%s上涨个股；%s下跌个股；";
     public static String QUERY_FORMAT_DIETING = "%s 跌停;非st；";
     public static String QUERY_FORMAT_BROKEN = "%s炸板；非st";
+
+    //情绪周期表维度--历史数据
+    public static String QUERY_FORMAT_ZHANGTING_HISTORY= "%s涨停；%s连续涨停天数>=1；上市时间超过50天";
+    public static String QUERY_FORMAT_DIETING_HISTORY = "%s 跌停";
+    public static String QUERY_FORMAT_BROKEN_HISTORY = "%s炸板";
+
     //行业 涨停个数维度
     public static String QUERY_FORMAT_BUSINESS_UPLIMIT = "%s 板块涨幅及涨停个数；同花顺行业指数；按 %s 涨停个数从大到小排序";
     //行业 涨幅维度
@@ -223,16 +229,19 @@ public class WenCaiService {
         return c_data_datas_array;
     }
 
-    /**
-     * 解析涨停数据
-     * @param date 2022-02-10
-     * @param emotionalCycle
-     */
-    public List<UpLimit> queryUpLimit(EmotionalCycle emotionalCycle,String date) throws IOException {
+    //补历史数据
+    public List<UpLimit> queryUpLimit(EmotionalCycle emotionalCycle,String date,boolean isHistory) throws IOException {
+
         //2022-02-07 -> 20220207
 //        String dateStr = "2022-02-07";
         String dateStr = DateUtils.coverToUnSymbol(date);
-        String zhangtingStr = String.format(QUERY_FORMAT_ZHANGTING_FENXI,dateStr,dateStr);
+        String zhangtingStr = "";
+        if (isHistory){
+            zhangtingStr = String.format(QUERY_FORMAT_ZHANGTING_HISTORY,dateStr,dateStr);
+        }else {
+            zhangtingStr = String.format(QUERY_FORMAT_ZHANGTING,dateStr,dateStr);
+        }
+
         JSONObject zhangtingJson = getWencaiJson(zhangtingStr);
         JSONObject zhangtingResult = apiService.post(wencaiUrl,zhangtingJson);
 
@@ -266,6 +275,9 @@ public class WenCaiService {
             upLimit.setLimitType(js.getString(field_limit_type));
             upLimit.setReason(StringUtils.isBlank(js.getString(field_limit_reason))?"-":js.getString(field_limit_reason));
             String code = js.getString(field_code);
+            if (isHistory && isST(code,js.getString(field_name),dateStr)){
+                continue;
+            }
             if (StringUtils.isBlank(code)){
                 continue;
             }
@@ -340,6 +352,30 @@ public class WenCaiService {
         return lists;
     }
 
+    public boolean isST(String code,String name,String dateStr){
+        StockDetail stockDetail = stockDetailService.getDetailByStockCodeAndDate(code,name,dateStr);
+        float maxRate = stockDetail.getMaxPriceRate().floatValue();
+        float minRate = stockDetail.getMinPriceRate().floatValue();
+        if (maxRate>9){
+            return false;
+        }
+        if (minRate<-9){
+            return false;
+        }
+
+        return true;
+    }
+
+
+    /**
+     * 解析涨停数据
+     * @param date 2022-02-10
+     * @param emotionalCycle
+     */
+    public List<UpLimit> queryUpLimit(EmotionalCycle emotionalCycle,String date) throws IOException {
+        return queryUpLimit(emotionalCycle,date,false);
+    }
+
     /**
      * 解析 上涨下跌数据
      */
@@ -371,17 +407,43 @@ public class WenCaiService {
         }
     }
 
-    /**
-     * 解析炸板数据
-     * @param emotionalCycle
-     * @param date  2022-02-10
-     * @param doesParseTheme 是否解析题材 默认true 解析
-     * @param doesParseLoseRate 是否解析亏损率
-     * 非当庭数据不准确
-     */
-    public List<BrokenLimit> queryBrokenLimit(EmotionalCycle emotionalCycle,String date,boolean doesParseTheme,boolean doesParseLoseRate) throws ParseException {
 
-        String brokenStr = String.format(QUERY_FORMAT_BROKEN,date);
+    /**
+     * 不统计主题和炸板收益 用于盘中监控炸板
+     * @param emotionalCycle
+     * @param date
+     * @return
+     * @throws ParseException
+     */
+    public List<BrokenLimit> queryBrokenLimitWithoutParse(EmotionalCycle emotionalCycle,String date) throws ParseException {
+        return queryBrokenLimit(emotionalCycle,date,false,false,false);
+    }
+
+    public List<BrokenLimit> queryBrokenLimit(EmotionalCycle emotionalCycle,String date,boolean isHistory) throws ParseException {
+        if (isHistory){
+            //历史数据没必要差题材
+            return queryBrokenLimit(emotionalCycle,date,false,true,isHistory);
+        }
+        return queryBrokenLimit(emotionalCycle,date,true,true,isHistory);
+    }
+
+
+        /**
+         * 解析炸板数据
+         * @param emotionalCycle
+         * @param date  2022-02-10
+         * @param doesParseTheme 是否解析题材 默认true 解析
+         * @param doesParseLoseRate 是否解析亏损率
+         * 非当庭数据不准确
+         */
+    private List<BrokenLimit> queryBrokenLimit(EmotionalCycle emotionalCycle,String date,boolean doesParseTheme,boolean doesParseLoseRate,boolean isHistory) throws ParseException {
+
+        String brokenStr = "";
+        if (isHistory){
+            brokenStr = String.format(QUERY_FORMAT_BROKEN_HISTORY,date);
+        }else{
+            brokenStr = String.format(QUERY_FORMAT_BROKEN,date);
+        }
         JSONObject brokenJson = getWencaiJson(brokenStr);
         JSONObject brokenResult = apiService.post(wencaiUrl,brokenJson);
 
@@ -419,13 +481,12 @@ public class WenCaiService {
         JSONObject componentJson = componentsArray.getJSONObject(0);
         JSONObject c_dataJson = componentJson.getJSONObject("data");
         JSONArray c_data_datas_array = c_dataJson.getJSONArray("datas");
-        emotionalCycle.setBrokenLimit(c_data_datas_array.size());
+
 
         List<BrokenLimit> lists = Lists.newArrayList();
 
         if (c_data_datas_array.size()>0){
             //破板统计
-
             for (int i=0;i<c_data_datas_array.size();i++){
                 JSONObject resultJson = c_data_datas_array.getJSONObject(i);
                 BrokenLimit limit = new BrokenLimit();
@@ -442,6 +503,9 @@ public class WenCaiService {
                         limit.setLossRate(stockDetail.getClosePriceRate().floatValue()-10);
                         limit.setClosePrice(stockDetail.getClosePrice().floatValue());
                     }
+                }
+                if (isHistory && isST(resultJson.getString(field_broken_code),resultJson.getString(field_broken_name),dateStr)){
+                    continue;
                 }
                 String timeDetail = resultJson.getString(field_broken_last_time);
                 String[] tdss = timeDetail.split("\\|\\|");
@@ -465,23 +529,25 @@ public class WenCaiService {
 
                 lists.add(limit);
             }
-
-        }else{
-
         }
+        emotionalCycle.setBrokenLimit(lists.size());
         return lists;
     }
 
-    /**
-     * 解析跌停数据
-     * @param emotionalCycle
-     * @param date 2022-02-10
-     */
     public List<DropLimit> queryDropLimit(EmotionalCycle emotionalCycle,String date){
+        return queryDropLimit(emotionalCycle,date,false);
+    }
+
+    public List<DropLimit> queryDropLimit(EmotionalCycle emotionalCycle,String date,boolean isHistory){
 
         String dateStr = DateUtils.coverToUnSymbol(date);
+        String dietingStr = "";
+        if (isHistory){
+            dietingStr = String.format(QUERY_FORMAT_DIETING_HISTORY,dateStr);
+        }else {
+            dietingStr = String.format(QUERY_FORMAT_DIETING,dateStr);
+        }
 
-        String dietingStr = String.format(QUERY_FORMAT_DIETING,dateStr);
         JSONObject dietingJson = getWencaiJson(dietingStr);
         JSONObject dietingResult = apiService.post(wencaiUrl,dietingJson);
 
@@ -503,7 +569,7 @@ public class WenCaiService {
         JSONObject c_dataJson = componentJson.getJSONObject("data");
         JSONArray c_data_datas_array = c_dataJson.getJSONArray("datas");
 
-        emotionalCycle.setDropLimit(c_data_datas_array.size());
+
         List<DropLimit> lists = Lists.newArrayList();
 
         if (c_data_datas_array.size()>0){
@@ -519,6 +585,10 @@ public class WenCaiService {
                     continue;
                 }
                 code = code.substring(0,6);
+                //历史st股排除统计
+                if (isHistory && isST(code,resultJson.getString(field_drop_name),dateStr)){
+                    continue;
+                }
                 dropLimit.setCode(code);
                 dropLimit.setName(resultJson.getString(field_drop_name));
                 dropLimit.setSequenceCount(resultJson.getInteger(field_drop_sequence_count));
@@ -526,144 +596,10 @@ public class WenCaiService {
                 lists.add(dropLimit);
             }
         }
+        emotionalCycle.setDropLimit(lists.size());
         return lists;
     }
 
-    /**
-     * 结果写入excel
-     */
-    public void writeResult(EmotionalCycle emotionalCycle,String dateStr) throws IOException {
-
-        String[] dss = dateStr.split("-");
-        String dateExStr = dss[1]+"."+dss[2];
-
-        InputStream in  = new FileInputStream(new File(excelFilePath));
-        XSSFWorkbook wb = new XSSFWorkbook(in);
-        FormulaEvaluator formulaEvaluator = new XSSFFormulaEvaluator(wb);
-
-        Sheet sheet = wb.getSheet("情绪周期表");
-
-        //先找要插入的位置
-        boolean isNewRow = true;
-        int insertIndex = 0;
-        int insertNum = 0;
-        for (int i=2;i<=sheet.getLastRowNum();i++){
-            //取第一列 比较日期
-            Cell cell = sheet.getRow(i).getCell(0);
-            if(cell==null || StringUtils.isBlank(cell.getStringCellValue())){
-                continue;
-            }
-            if (StringUtils.compare(dateExStr,cell.getStringCellValue())<=0){
-                if (StringUtils.compare(dateExStr,cell.getStringCellValue())==0){
-                    //该日期已有数据，覆盖
-                    isNewRow = false;
-                }
-                insertIndex = i;
-                break;
-            }
-        }
-
-        Row insertRow ;
-
-        if (isNewRow){
-            if (insertIndex==0){
-                //不需要插入，追加数据
-                insertNum = sheet.getLastRowNum()+2;
-                insertRow = sheet.createRow(sheet.getLastRowNum()+1);
-            }else{
-                insertNum=insertIndex+1;
-                //插入，后移原数据再插入
-                sheet.shiftRows(insertIndex, sheet.getLastRowNum(), 1);
-                //poi shiftRows bug
-                if (sheet instanceof XSSFSheet) {
-                    XSSFSheet xSSFSheet = (XSSFSheet) sheet;
-                    for (int r = xSSFSheet.getFirstRowNum(); r < sheet.getLastRowNum() + 1; r++) {
-                        XSSFRow row = xSSFSheet.getRow(r);
-                        if (row != null) {
-                            long rRef = row.getCTRow().getR();
-                            for (Cell cell : row) {
-                                String cRef = ((XSSFCell) cell).getCTCell().getR();
-                                ((XSSFCell) cell).getCTCell().setR(cRef.replaceAll("[0-9]", "") + rRef);
-                            }
-                        }
-                    }
-                }
-                insertRow = sheet.createRow(insertIndex);
-            }
-        }else{
-            insertRow = sheet.getRow(insertIndex);
-            insertNum = insertIndex+1;
-        }
-
-        //写入数据
-        short height = 650;
-        insertRow.setHeight(height);
-        //日期
-        Cell cell1 = insertRow.createCell(0);
-        cell1.setCellStyle(sheet.getColumnStyle(0));
-        cell1.setCellValue(dateExStr);
-        //红盘
-        Cell cell2 = insertRow.createCell(1);
-        cell2.setCellStyle(sheet.getColumnStyle(1));
-        cell2.setCellValue(emotionalCycle.getUpCount());
-        //绿盘
-        Cell cell3 = insertRow.createCell(2);
-        cell3.setCellStyle(sheet.getColumnStyle(2));
-        cell3.setCellValue(emotionalCycle.getDropCount());
-        //涨停
-        Cell cell4 = insertRow.createCell(3);
-        cell4.setCellStyle(sheet.getColumnStyle(1));
-        cell4.setCellValue(emotionalCycle.getUpLimit());
-        //跌停
-        Cell cell5 = insertRow.createCell(4);
-        cell5.setCellStyle(sheet.getColumnStyle(4));
-        cell5.setCellValue(emotionalCycle.getDropLimit());
-        //炸板
-        Cell cell6 = insertRow.createCell(5);
-        cell6.setCellStyle(sheet.getColumnStyle(5));
-        cell6.setCellValue(emotionalCycle.getBrokenLimit());
-        //cell7 炸板率excel自己计算
-        Cell cell7 = insertRow.createCell(6);
-        cell7.setCellStyle(sheet.getColumnStyle(6));
-        String cell7Format = "F%d/(D%d+F%d)";
-        cell7.setCellFormula(String.format(cell7Format,insertNum,insertNum,insertNum));
-        //cell8 首板excel自己计算
-        Cell cell8 = insertRow.createCell(7);
-        cell8.setCellStyle(sheet.getColumnStyle(7));
-        String cell8Format = "D%d-I%d-J%d-L%d";
-        cell8.setCellFormula(String.format(cell8Format,insertNum,insertNum,insertNum,insertNum));
-        //2板
-        Cell cell9 = insertRow.createCell(8);
-        cell9.setCellStyle(sheet.getColumnStyle(8));
-        cell9.setCellValue(emotionalCycle.getSecondLimit());
-        //3板个数
-        Cell cell10 = insertRow.createCell(9);
-        cell10.setCellStyle(sheet.getColumnStyle(9));
-        cell10.setCellValue(emotionalCycle.getThirdLimit());
-        //3板详情
-        Cell cell11 = insertRow.createCell(10);
-        cell11.setCellStyle(sheet.getColumnStyle(10));
-        cell11.setCellValue(emotionalCycle.getThirdLimitStr());
-        //3板以上
-        Cell cell12 = insertRow.createCell(11);
-        cell12.setCellStyle(sheet.getColumnStyle(11));
-        cell12.setCellValue(emotionalCycle.getMoreLimit());
-        //3板以上详情
-        Cell cell13 = insertRow.createCell(12);
-        cell13.setCellStyle(sheet.getColumnStyle(12));
-        cell13.setCellValue(emotionalCycle.getMoreLimitStr());
-        //热门板块
-        Cell cell14 = insertRow.createCell(13);
-        cell14.setCellStyle(sheet.getColumnStyle(13));
-        cell14.setCellValue(emotionalCycle.getHotBusinessOrderLimit());
-
-
-        formulaEvaluator.evaluateAll();
-
-        FileOutputStream out = new FileOutputStream(excelFilePath);
-        wb.write(out);
-
-    }
 
     public static void main(String[] args) throws IOException {
 
