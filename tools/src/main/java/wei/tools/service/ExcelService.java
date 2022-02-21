@@ -1,5 +1,6 @@
 package wei.tools.service;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import wei.tools.model.EmotionalCycle;
 
 import java.io.*;
+import java.util.List;
 
 /**
  * @Author: weiyanan
@@ -21,6 +23,29 @@ public class ExcelService {
 
     @Value("${review.filePath}")
     private String excelFilePath ;
+
+    public void test() throws IOException {
+        InputStream in  = new FileInputStream(new File(excelFilePath));
+        XSSFWorkbook wb = new XSSFWorkbook(in);
+        FormulaEvaluator formulaEvaluator = new XSSFFormulaEvaluator(wb);
+
+        Sheet sheet = wb.getSheet("涨停收益");
+        String dateStr = "01.15";
+        List<Row> rows = calculateInsertRows(sheet,dateStr,2,3);
+        for (Row row:rows){
+            Cell cell1 = row.createCell(0);
+            cell1.setCellStyle(sheet.getColumnStyle(0));
+            cell1.setCellValue(dateStr);
+            //红盘
+            Cell cell2 = row.createCell(1);
+            cell2.setCellStyle(sheet.getColumnStyle(1));
+            cell2.setCellValue("222222");
+        }
+
+        FileOutputStream out = new FileOutputStream(excelFilePath);
+        wb.write(out);
+
+    }
 
     /**
      * 结果写入excel
@@ -122,7 +147,6 @@ public class ExcelService {
         Row insertRow;
         boolean isNewRow = true;
         int insertIndex = 0;
-        int insertNum = 0;
         for (int i=2;i<=sheet.getLastRowNum();i++){
             //取第一列 比较日期
             Cell cell = sheet.getRow(i).getCell(0);
@@ -142,10 +166,8 @@ public class ExcelService {
         if (isNewRow){
             if (insertIndex==0){
                 //不需要插入，追加数据
-                insertNum = sheet.getLastRowNum()+2;
                 insertRow = sheet.createRow(sheet.getLastRowNum()+1);
             }else{
-                insertNum=insertIndex+1;
                 //插入，后移原数据再插入
                 sheet.shiftRows(insertIndex, sheet.getLastRowNum(), 1);
                 //poi shiftRows bug
@@ -166,9 +188,88 @@ public class ExcelService {
             }
         }else{
             insertRow = sheet.getRow(insertIndex);
-            insertNum = insertIndex+1;
         }
         return insertRow;
     }
+
+
+    /**
+     * 定位到要插入的行，新增则创建新的,原来的数据被删除
+     * @param sheet
+     * @param dateExStr
+     * @param dataBeginIndex
+     * @param nums
+     * @return
+     */
+    private List<Row> calculateInsertRows(Sheet sheet, String dateExStr,int dataBeginIndex,int nums ){
+        //先找要插入的位置
+        List<Row> rows = Lists.newArrayList();
+        int insertIndex = 0;
+        boolean hasDelete = false;
+        int deleteCount = 0;
+        for (int i=dataBeginIndex;i<=sheet.getLastRowNum();i++){
+            //取第一列 比较日期
+            Cell cell = sheet.getRow(i).getCell(0);
+            if(cell==null || StringUtils.isBlank(cell.getStringCellValue())){
+                continue;
+            }
+            if (StringUtils.compare(dateExStr,cell.getStringCellValue())<=0){
+                if (StringUtils.compare(dateExStr,cell.getStringCellValue())==0){
+                    //该日期已有数据，删除多行
+                    sheet.removeRow(sheet.getRow(i));
+                    if (!hasDelete){
+                        insertIndex = i;
+                        hasDelete = true;
+                    }
+                    deleteCount++;
+                    continue;
+                }else {
+                    if (hasDelete){
+                        shiftRows(sheet,insertIndex+deleteCount,-deleteCount);
+                    }else{
+                        insertIndex = i;
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (insertIndex==0){
+            //不需要插入，追加数据
+            int oldTotal = sheet.getLastRowNum();
+            for (int i=1;i<=nums;i++){
+                Row insertRow = sheet.createRow(oldTotal+i);
+                rows.add(insertRow);
+            }
+        }else{
+            //插入，后移原数据再插入
+            shiftRows(sheet,insertIndex,nums);
+            for(int i=0;i<nums;i++){
+                Row insertRow = sheet.createRow(insertIndex+i);
+                rows.add(insertRow);
+            }
+        }
+
+        return rows;
+    }
+
+    private void shiftRows(Sheet sheet,int insertIndex, int nums){
+        sheet.shiftRows(insertIndex, sheet.getLastRowNum(), nums);
+        //poi shiftRows bug
+        if (sheet instanceof XSSFSheet) {
+            XSSFSheet xSSFSheet = (XSSFSheet) sheet;
+            for (int r = xSSFSheet.getFirstRowNum(); r < sheet.getLastRowNum() + 1; r++) {
+                XSSFRow row = xSSFSheet.getRow(r);
+                if (row != null) {
+                    long rRef = row.getCTRow().getR();
+                    for (Cell cell : row) {
+                        String cRef = ((XSSFCell) cell).getCTCell().getR();
+                        ((XSSFCell) cell).getCTCell().setR(cRef.replaceAll("[0-9]", "") + rRef);
+                    }
+                }
+            }
+        }
+    }
+
 
 }
