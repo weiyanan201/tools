@@ -39,4 +39,8 @@
     SELECT max(day_str) FROM `t_trading_day` where day_str <![CDATA[<]]> #{dayStr} and is_trading=1
   </select>
 
+  <select id="getNextTradingDayStr" resultType="java.lang.String">
+    SELECT min(day_str) FROM `t_trading_day` where day_str > #{dayStr} and is_trading=1
+  </select>
+
 </mapper>

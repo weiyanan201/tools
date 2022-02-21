@@ -50,7 +50,8 @@ public class StockDetailService {
         JSONArray resultArray = JSONArray.parseArray(resultStr);
         JSONObject resultJson = resultArray.getJSONObject(0);
         if (resultJson.getInteger("status")!=0){
-            throw new ToolsException("获取历史股价接口出现异常");
+            logger.error("获取历史股价接口出现异常{},{}",stockCode,dateUnSymbolStr);
+            return null;
         }
 
         StockDetail stockDetail = new StockDetail();
@@ -85,7 +86,12 @@ public class StockDetailService {
         stockDetail.setMinPriceRate(getBigDecimal(minPriceRateCal));
         stockDetail.setMaxPrice(getBigDecimal(maxPrice));
         stockDetail.setMaxPriceRate(getBigDecimal(maxPriceRateCal));
-        stockDetail.setTurnoverRate(getBigDecimal(Float.valueOf(turnoverStr.replaceAll("%",""))));
+        try{
+            stockDetail.setTurnoverRate(getBigDecimal(Float.valueOf(turnoverStr.replaceAll("%",""))));
+        }catch (Exception exception){
+            logger.warn("{}-{} 解析股价出现异常,turnoverStr：{}",dateUnSymbolStr,stockCode,turnoverStr);
+        }
+
         stockDetail.setSwingRate(getBigDecimal(Float.valueOf(df.format(swingRate))));
         stockDetail.setLastDayClosePrice(getBigDecimal(lastDayClosePrice));
 
@@ -112,7 +118,10 @@ public class StockDetailService {
                 continue;
             }
             try{
-                results.add(getDetailByStockCodeAndDate(code,codeNameMap.get(code),dateStr));
+                StockDetail stockDetail = getDetailByStockCodeAndDate(code,codeNameMap.get(code),dateStr);
+                if (stockDetail!=null){
+                    results.add(stockDetail);
+                }
             }catch (Exception exception){
                 logger.warn("获取{}-{}股价出现异常!",dateStr,code);
             }

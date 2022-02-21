@@ -40,6 +40,7 @@ log:
   level: info
 
 review:
-  filePath: C:\Users\homay\iCloudDrive\stock\2022\2022复盘记录.xlsx
+#  filePath: C:\Users\homay\iCloudDrive\stock\2021复盘记录.xlsx
+  filePath: D:\2022复盘记录.xlsx
 
 

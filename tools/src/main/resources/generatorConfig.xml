@@ -48,7 +48,7 @@
         </javaClientGenerator>
 
 
-        <table schema="tools" tableName="t_emotional_cycle"  domainObjectName="EmotionalCycle"
+        <table schema="tools" tableName="t_limit_earnings"  domainObjectName="LimitEarnings"
                 enableInsert="true" enableSelectByExample="false" enableDeleteByPrimaryKey="false"
                 enableDeleteByExample="false" enableCountByExample="false" enableUpdateByExample="false">
             <property name="selectAllOrderByClause" value=""/>

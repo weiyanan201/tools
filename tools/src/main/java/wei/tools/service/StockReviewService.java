@@ -111,7 +111,7 @@ public class StockReviewService {
      * @param dateStr 该日这些个股的股价
      * @return
      */
-    public List<StockDetail> crawlerStockDetails(String lastDateStr,String dateStr){
+    private List<StockDetail> crawlerStockDetails(String dateStr,String lastDateStr){
         //
         String lastDateStrUnSymbol = DateUtils.coverToUnSymbol(lastDateStr);
         String dateStrUnSymbol = DateUtils.coverToUnSymbol(dateStr);
@@ -130,6 +130,13 @@ public class StockReviewService {
             codeNameMap.put(brokenLimit.getCode(),brokenLimit.getName());
         }
         return stockDetailService.getDetailsByDate(lastDayCodes,codeNameMap,dateStrUnSymbol);
+    }
+
+    public void fixupCrawlerStockDetails(String dateStr,String lastDateStr){
+        List<StockDetail> stockDetails = crawlerStockDetails(dateStr,lastDateStr);
+        if (stockDetails.size()>0){
+            stockDetailMapper.batchInsertOrUpdate(stockDetails);
+        }
     }
 
     /**

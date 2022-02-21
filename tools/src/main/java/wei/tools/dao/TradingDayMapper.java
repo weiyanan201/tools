@@ -16,4 +16,7 @@ public interface TradingDayMapper {
 
     //获取上一个交易日的日期
     String getLastTradingDayStr(@Param("dayStr") String dayStr);
+
+    //获取下一个交易日的日期
+    String getNextTradingDayStr(@Param("dayStr") String dayStr);
 }

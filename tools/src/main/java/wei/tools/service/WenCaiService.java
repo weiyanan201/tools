@@ -5,11 +5,6 @@ import com.alibaba.fastjson.JSONObject;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.FormulaEvaluator;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.xssf.usermodel.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +15,10 @@ import wei.tools.model.*;
 import wei.tools.util.DateUtils;
 import wei.tools.util.DecimalUtils;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.text.ParseException;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -354,6 +352,9 @@ public class WenCaiService {
 
     public boolean isST(String code,String name,String dateStr){
         StockDetail stockDetail = stockDetailService.getDetailByStockCodeAndDate(code,name,dateStr);
+        if (stockDetail==null){
+            return true;
+        }
         float maxRate = stockDetail.getMaxPriceRate().floatValue();
         float minRate = stockDetail.getMinPriceRate().floatValue();
         if (maxRate>9){
@@ -500,8 +501,10 @@ public class WenCaiService {
                         limit.setClosePrice(resultJson.getFloat(field_broken_close_price));
                     }else{
                         StockDetail stockDetail = stockDetailService.getDetailByStockCodeAndDate(resultJson.getString(field_broken_code),resultJson.getString(field_broken_name),dateStr);
-                        limit.setLossRate(stockDetail.getClosePriceRate().floatValue()-10);
-                        limit.setClosePrice(stockDetail.getClosePrice().floatValue());
+                        if (stockDetail!=null){
+                            limit.setLossRate(stockDetail.getClosePriceRate().floatValue()-10);
+                            limit.setClosePrice(stockDetail.getClosePrice().floatValue());
+                        }
                     }
                 }
                 if (isHistory && isST(resultJson.getString(field_broken_code),resultJson.getString(field_broken_name),dateStr)){

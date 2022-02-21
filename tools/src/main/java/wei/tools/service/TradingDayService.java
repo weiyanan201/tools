@@ -34,7 +34,20 @@ public class TradingDayService {
      * @throws ParseException
      */
     public String getLastTradingDay(String todayStr) throws ParseException {
+        DateUtils.checkFormat(todayStr);
         String lastDay = tradingDayMapper.getLastTradingDayStr(todayStr);
+        return lastDay;
+    }
+
+    /**
+     * 获取下个交易日日期
+     * @param todayStr
+     * @return
+     * @throws ParseException
+     */
+    public String getNextTradingDay(String todayStr) throws ParseException {
+        DateUtils.checkFormat(todayStr);
+        String lastDay = tradingDayMapper.getNextTradingDayStr(todayStr);
         return lastDay;
     }
 

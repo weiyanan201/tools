@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="wei.tools.dao.LimitEarningsMapper">
+  <resultMap id="BaseResultMap" type="wei.tools.model.LimitEarnings">
+    <result column="date" jdbcType="VARCHAR" property="date" />
+    <result column="limit_type" jdbcType="VARCHAR" property="limitType" />
+    <result column="limit_num" jdbcType="INTEGER" property="limitNum" />
+    <result column="avg_open" jdbcType="DECIMAL" property="avgOpen" />
+    <result column="avg_close" jdbcType="DECIMAL" property="avgClose" />
+    <result column="avg_max" jdbcType="DECIMAL" property="avgMax" />
+    <result column="avg_min" jdbcType="DECIMAL" property="avgMin" />
+    <result column="is_broken" jdbcType="INTEGER" property="isBroken" />
+    <result column="emotional_flag" jdbcType="VARCHAR" property="emotionalFlag" />
+  </resultMap>
+  <insert id="insert" parameterType="wei.tools.model.LimitEarnings">
+    insert into t_limit_earnings (date, limit_type, limit_num, 
+      avg_open, avg_close, avg_max, 
+      avg_min, is_broken, emotional_flag
+      )
+    values (#{date,jdbcType=VARCHAR}, #{limitType,jdbcType=VARCHAR}, #{limitNum,jdbcType=INTEGER}, 
+      #{avgOpen,jdbcType=DECIMAL}, #{avgClose,jdbcType=DECIMAL}, #{avgMax,jdbcType=DECIMAL}, 
+      #{avgMin,jdbcType=DECIMAL}, #{isBroken,jdbcType=INTEGER}, #{emotionalFlag,jdbcType=VARCHAR}
+      )
+  </insert>
+  <select id="findAll" resultMap="BaseResultMap">
+    select date, limit_type, limit_num, avg_open, avg_close, avg_max, avg_min, is_broken, 
+    emotional_flag
+    from t_limit_earnings
+  </select>
+</mapper>
