@@ -102,7 +102,7 @@ public class ApiService {
     public JSONObject post(String url, JSONObject body){
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        logger.info("call post : " + url + " ; body : " + body.toString());
+
         return this.post(url,body,headers);
     }
 
@@ -121,6 +121,7 @@ public class ApiService {
      */
     public JSONObject post(String url, JSONObject body, HttpHeaders headers){
         HttpEntity requestBody = new HttpEntity(body, headers);
+        logger.info("call post : " + url + " ; body : " + body.toString());
 //        ResponseEntity<JSONObject> entity = restTemplate.postForEntity(url,requestBody,JSONObject.class);
         return restTemplate.postForEntity(url,requestBody,JSONObject.class).getBody();
     }

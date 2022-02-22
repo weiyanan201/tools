@@ -9,16 +9,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ResourceUtils;
 import wei.tools.dao.UpLimitMapper;
 import wei.tools.model.*;
 import wei.tools.util.DateUtils;
 import wei.tools.util.DecimalUtils;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import javax.annotation.PostConstruct;
+import javax.script.Invocable;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+import java.io.*;
 import java.text.ParseException;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -103,6 +108,31 @@ public class WenCaiService {
     @Autowired
     private TradingDayService tradingDayService;
 
+    private static StringBuilder scriptSb = new StringBuilder();
+    private static ScriptEngine engine;
+    private static Invocable jsInv;
+
+    @PostConstruct
+    private void init() throws IOException, ScriptException {
+
+        String jsPath = ResourceUtils.getURL("classpath:aes.min.js").getPath();
+        File file = new File(jsPath);
+        FileReader filereader = new FileReader(file);
+        BufferedReader bufferreader = new BufferedReader(filereader);
+        String tempString = null;
+        while ((tempString = bufferreader.readLine()) != null) {
+            scriptSb.append(tempString).append("\n");
+        }
+        bufferreader.close();
+        filereader.close();
+
+        ScriptEngineManager mgr = new ScriptEngineManager();
+        engine = mgr.getEngineByName("javascript");
+        engine.eval(scriptSb.toString());
+        jsInv = (Invocable) engine;
+
+    }
+
     /**
      * 获取题材
      * @param stockName
@@ -111,7 +141,7 @@ public class WenCaiService {
     public String queryStockTheme(String stockName){
         try{
             JSONObject paramJson = getWencaiJson(stockName);
-            JSONObject resultJson = apiService.post(wencaiUrl,paramJson);
+            JSONObject resultJson = apiService.post(wencaiUrl,paramJson,getCookieHeaders());
 
             JSONObject dataJson = resultJson.getJSONObject("data");
             JSONArray answerArray = dataJson.getJSONArray("answer");
@@ -176,12 +206,12 @@ public class WenCaiService {
      * @param emotionalCycle
      * @param date
      */
-    public void queryHotBusiness(EmotionalCycle emotionalCycle, String date){
+    public void queryHotBusiness(EmotionalCycle emotionalCycle, String date)  {
 
         //安涨停个数统计
         String byUpLimitStr = String.format(QUERY_FORMAT_BUSINESS_UPLIMIT,date,date);
         JSONObject upLimitJson = getWencaiZhiShuJson(byUpLimitStr);
-        JSONObject upLimitResultJson = apiService.post(wencaiUrl,upLimitJson);
+        JSONObject upLimitResultJson = apiService.post(wencaiUrl,upLimitJson,getCookieHeaders());
 
         String dateStr = DateUtils.coverToUnSymbol(date);
 
@@ -214,6 +244,22 @@ public class WenCaiService {
 
     }
 
+    private HttpHeaders getCookieHeaders()  {
+        HttpHeaders headers = new HttpHeaders();
+
+        try{
+            Object res = (Object) jsInv.invokeFunction("v");
+            headers.add("Cookie", "v="+res);
+            headers.add("Accept","application/json, text/plain, */*");
+            headers.add("User-Agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.80 Safari/537.36");
+            headers.setContentType(MediaType.APPLICATION_JSON);
+        }catch (Exception e){
+            logger.error("js 脚本执行出错",e);
+        }
+        return headers;
+
+    }
+
     private JSONArray parseToDatas(JSONObject dataJson ){
         JSONArray answerArray = dataJson.getJSONArray("answer");
         JSONObject answerJson = answerArray.getJSONObject(0);
@@ -228,7 +274,7 @@ public class WenCaiService {
     }
 
     //补历史数据
-    public List<UpLimit> queryUpLimit(EmotionalCycle emotionalCycle,String date,boolean isHistory) throws IOException {
+    public List<UpLimit> queryUpLimit(EmotionalCycle emotionalCycle,String date,boolean isHistory)  {
 
         //2022-02-07 -> 20220207
 //        String dateStr = "2022-02-07";
@@ -241,7 +287,7 @@ public class WenCaiService {
         }
 
         JSONObject zhangtingJson = getWencaiJson(zhangtingStr);
-        JSONObject zhangtingResult = apiService.post(wencaiUrl,zhangtingJson);
+        JSONObject zhangtingResult = apiService.post(wencaiUrl,zhangtingJson,getCookieHeaders());
 
 
         String field_limit_type = String.format(FIELD_LIMIT_TYPE_FORMAT,dateStr);
@@ -380,11 +426,11 @@ public class WenCaiService {
     /**
      * 解析 上涨下跌数据
      */
-    public void queryUpDrop(EmotionalCycle emotionalCycle,String dateStr){
+    public void queryUpDrop(EmotionalCycle emotionalCycle,String dateStr)  {
 
         String upDropStr = String.format(QUERY_FORMAT_UP_DROP,dateStr,dateStr);
         JSONObject upDropJson = getWencaiJson(upDropStr);
-        JSONObject upDropResult = apiService.post(wencaiUrl,upDropJson);
+        JSONObject upDropResult = apiService.post(wencaiUrl,upDropJson,getCookieHeaders());
 
         JSONObject dataJson = upDropResult.getJSONObject("data");
         JSONArray answerArray = dataJson.getJSONArray("answer");
@@ -446,7 +492,7 @@ public class WenCaiService {
             brokenStr = String.format(QUERY_FORMAT_BROKEN,date);
         }
         JSONObject brokenJson = getWencaiJson(brokenStr);
-        JSONObject brokenResult = apiService.post(wencaiUrl,brokenJson);
+        JSONObject brokenResult = apiService.post(wencaiUrl,brokenJson,getCookieHeaders());
 
         String todayStr = DateUtils.getTodayStr();
         boolean isToday = StringUtils.equals(todayStr,date);
@@ -541,7 +587,7 @@ public class WenCaiService {
         return queryDropLimit(emotionalCycle,date,false);
     }
 
-    public List<DropLimit> queryDropLimit(EmotionalCycle emotionalCycle,String date,boolean isHistory){
+    public List<DropLimit> queryDropLimit(EmotionalCycle emotionalCycle,String date,boolean isHistory) {
 
         String dateStr = DateUtils.coverToUnSymbol(date);
         String dietingStr = "";
@@ -552,7 +598,7 @@ public class WenCaiService {
         }
 
         JSONObject dietingJson = getWencaiJson(dietingStr);
-        JSONObject dietingResult = apiService.post(wencaiUrl,dietingJson);
+        JSONObject dietingResult = apiService.post(wencaiUrl,dietingJson,getCookieHeaders());
 
         String field_drop_type = String.format(FIELD_DROP_TYPE_FORMAT,dateStr);
         String field_drop_season = String.format(FIELD_DROP_SEASON_FORMAT,dateStr);
