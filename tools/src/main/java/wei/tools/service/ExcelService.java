@@ -10,6 +10,8 @@ import org.apache.poi.xssf.usermodel.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import wei.tools.model.EmotionalCycle;
+import wei.tools.model.LimitEarnings;
+import wei.tools.util.DecimalUtils;
 
 import java.io.*;
 import java.util.List;
@@ -137,6 +139,78 @@ public class ExcelService {
     }
 
     /**
+     * 涨停、炸板次日收益
+     * @throws IOException
+     */
+    public void writeUpLimitEarningResult(List<LimitEarnings> limits,List<LimitEarnings>brokens,String dateStr) throws IOException {
+
+
+        String[] dss = dateStr.split("-");
+        String dateExStr = dss[1]+"."+dss[2];
+        String limitSheetName = "涨停收益";
+        String brokenSheetName = "炸板收益";
+
+        InputStream in  = new FileInputStream(new File(excelFilePath));
+        XSSFWorkbook wb = new XSSFWorkbook(in);
+        String sheetName = "";
+
+        //涨停收益
+        if (limits!=null && limits.size()>0){
+            Sheet sheet = wb.getSheet(limitSheetName);
+            List<Row> rows = calculateInsertRows(sheet,dateExStr,2,limits.size());
+            for (int i=0;i<rows.size();i++){
+                Row row = rows.get(i);
+                LimitEarnings limitEarnings = limits.get(i);
+                packLimitEarningRow(sheet,row,limitEarnings,dateExStr);
+            }
+        }
+        //炸板收益
+        if (brokens!=null && brokens.size()>0){
+            Sheet sheet = wb.getSheet(brokenSheetName);
+            List<Row> rows = calculateInsertRows(sheet,dateExStr,2,brokens.size());
+            for (int i=0;i<rows.size();i++){
+                Row row = rows.get(i);
+                LimitEarnings limitEarnings = limits.get(i);
+                packLimitEarningRow(sheet,row,limitEarnings,dateExStr);
+            }
+        }
+
+        FileOutputStream out = new FileOutputStream(excelFilePath);
+        wb.write(out);
+    }
+
+    private void packLimitEarningRow(Sheet sheet,Row row,LimitEarnings limitEarnings,String dateExStr){
+        //日期
+        Cell cell1 = row.createCell(0);
+        cell1.setCellStyle(sheet.getColumnStyle(0));
+        cell1.setCellValue(dateExStr);
+        //第几版
+        Cell cell2 = row.createCell(1);
+        cell2.setCellStyle(sheet.getColumnStyle(1));
+        cell2.setCellValue(limitEarnings.getLimitType()+"板");
+        //个数
+        Cell cell3 = row.createCell(2);
+        cell3.setCellStyle(sheet.getColumnStyle(2));
+        cell3.setCellValue(limitEarnings.getLimitNum());
+        //次日开盘收益
+        Cell cell4 = row.createCell(3);
+        cell4.setCellStyle(sheet.getColumnStyle(3));
+        cell4.setCellValue(DecimalUtils.roundValue(limitEarnings.getAvgOpen()));
+        //次日最高
+        Cell cell5 = row.createCell(4);
+        cell5.setCellStyle(sheet.getColumnStyle(4));
+        cell5.setCellValue(DecimalUtils.roundValue(limitEarnings.getAvgMax()));
+        //次日最低
+        Cell cell6 = row.createCell(5);
+        cell6.setCellStyle(sheet.getColumnStyle(5));
+        cell6.setCellValue(DecimalUtils.roundValue(limitEarnings.getAvgMin()));
+        //次日收盘
+        Cell cell7 = row.createCell(6);
+        cell7.setCellStyle(sheet.getColumnStyle(6));
+        cell7.setCellValue(DecimalUtils.roundValue(limitEarnings.getAvgClose()));
+    }
+
+    /**
      * 定位到要插入的行，新增则创建新的
      * @param sheet
      * @param dateExStr
@@ -207,6 +281,8 @@ public class ExcelService {
         int insertIndex = 0;
         boolean hasDelete = false;
         int deleteCount = 0;
+        //bug 最后一行数据与插入数据相同，没有发生移动
+        boolean isLastDelete = false;
         for (int i=dataBeginIndex;i<=sheet.getLastRowNum();i++){
             //取第一列 比较日期
             Cell cell = sheet.getRow(i).getCell(0);
@@ -220,18 +296,24 @@ public class ExcelService {
                     if (!hasDelete){
                         insertIndex = i;
                         hasDelete = true;
+                        isLastDelete = true;
                     }
                     deleteCount++;
                     continue;
                 }else {
                     if (hasDelete){
                         shiftRows(sheet,insertIndex+deleteCount,-deleteCount);
+                        isLastDelete = false;
                     }else{
                         insertIndex = i;
                     }
                     break;
                 }
             }
+        }
+        if (isLastDelete){
+            //最后数据被删除，excel默认行不存在
+            insertIndex=0;
         }
 
         if (insertIndex==0){
