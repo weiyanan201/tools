@@ -9,6 +9,7 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import wei.tools.model.BrokenRate;
 import wei.tools.model.EmotionalCycle;
 import wei.tools.model.LimitEarnings;
 import wei.tools.util.DecimalUtils;
@@ -177,6 +178,99 @@ public class ExcelService {
 
         FileOutputStream out = new FileOutputStream(excelFilePath);
         wb.write(out);
+    }
+
+    public void writeBrokenRateResult(BrokenRate brokenRate,String dateStr) throws IOException {
+        String dateExStr = coverDate(dateStr);
+        InputStream in  = new FileInputStream(new File(excelFilePath));
+        XSSFWorkbook wb = new XSSFWorkbook(in);
+        FormulaEvaluator formulaEvaluator = new XSSFFormulaEvaluator(wb);
+
+        Sheet sheet = wb.getSheet("炸板率");
+        Row insertRow = calculateInsertRow(sheet,dateExStr);
+        int insertNum = insertRow.getRowNum()+1;
+
+        //写入数据
+        Cell cell1 = insertRow.createCell(0);
+        cell1.setCellStyle(sheet.getColumnStyle(0));
+        cell1.setCellValue(dateExStr);
+        //涨停家数
+        Cell cell2 = insertRow.createCell(1);
+        cell2.setCellStyle(sheet.getColumnStyle(1));
+        cell2.setCellValue(brokenRate.getLimitCount());
+        //炸板家数
+        Cell cell3 = insertRow.createCell(2);
+        cell3.setCellStyle(sheet.getColumnStyle(2));
+        cell3.setCellValue(brokenRate.getBrokenCount());
+        //炸板率
+        Cell cell4 = insertRow.createCell(3);
+        cell4.setCellStyle(sheet.getColumnStyle(3));
+        cell4.setCellValue(DecimalUtils.covertPercent(brokenRate.getBrokenRate()));
+        //首板涨停个数
+        Cell cell5 = insertRow.createCell(4);
+        cell5.setCellStyle(sheet.getColumnStyle(4));
+        cell5.setCellValue(brokenRate.getFirstLimitCount());
+        //首板炸板个数
+        Cell cell6 = insertRow.createCell(5);
+        cell6.setCellStyle(sheet.getColumnStyle(5));
+        cell6.setCellValue(brokenRate.getFirstBrokenCount());
+        //首板炸板率
+        Cell cell7 = insertRow.createCell(6);
+        cell7.setCellStyle(sheet.getColumnStyle(6));
+        cell7.setCellValue(DecimalUtils.covertPercent(brokenRate.getFirstBrokenRate()));
+        //2板涨停个数
+        Cell cell8 = insertRow.createCell(7);
+        cell8.setCellStyle(sheet.getColumnStyle(7));
+        cell8.setCellValue(brokenRate.getSecondLimitCount());
+        //2板炸板个数
+        Cell cell9 = insertRow.createCell(8);
+        cell9.setCellStyle(sheet.getColumnStyle(8));
+        cell9.setCellValue(brokenRate.getSecondBrokenCount());
+        //2板炸板率
+        Cell cell10 = insertRow.createCell(9);
+        cell10.setCellStyle(sheet.getColumnStyle(9));
+        cell10.setCellValue(DecimalUtils.covertPercent(brokenRate.getSecondBrokenRate()));
+        //3板涨停个数
+        Cell cell11 = insertRow.createCell(10);
+        cell11.setCellStyle(sheet.getColumnStyle(10));
+        cell11.setCellValue(brokenRate.getThirdLimitCount());
+        //3板炸板个数
+        Cell cell12 = insertRow.createCell(11);
+        cell12.setCellStyle(sheet.getColumnStyle(11));
+        cell12.setCellValue(brokenRate.getThirdBrokenCount());
+        //3板炸板率
+        Cell cell13 = insertRow.createCell(12);
+        cell13.setCellStyle(sheet.getColumnStyle(12));
+        cell13.setCellValue(DecimalUtils.covertPercent(brokenRate.getThirdBrokenRate()));
+        //3+涨停个数
+        Cell cell14 = insertRow.createCell(13);
+        cell14.setCellStyle(sheet.getColumnStyle(13));
+        cell14.setCellValue(brokenRate.getMoreLimitCount());
+        //3+炸板个数
+        Cell cell15 = insertRow.createCell(14);
+        cell15.setCellStyle(sheet.getColumnStyle(14));
+        cell15.setCellValue(brokenRate.getMoreBrokenCount());
+        //3+炸板率
+        Cell cell16 = insertRow.createCell(15);
+        cell16.setCellStyle(sheet.getColumnStyle(15));
+        cell16.setCellValue(DecimalUtils.covertPercent(brokenRate.getMoreBrokenRate()));
+
+        formulaEvaluator.evaluateAll();
+
+        FileOutputStream out = new FileOutputStream(excelFilePath);
+        wb.write(out);
+
+    }
+
+    /**
+     * mm-dd 转化成 mm.dd
+     * @param dateStr
+     * @return
+     */
+    private String coverDate(String dateStr){
+        String[] dss = dateStr.split("-");
+        String dateExStr = dss[1]+"."+dss[2];
+        return dateExStr;
     }
 
     private void packLimitEarningRow(Sheet sheet,Row row,LimitEarnings limitEarnings,String dateExStr){

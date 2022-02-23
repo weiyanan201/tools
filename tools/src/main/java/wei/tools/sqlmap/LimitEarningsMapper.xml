@@ -27,4 +27,53 @@
     emotional_flag
     from t_limit_earnings
   </select>
+
+  <select id="countLimitEarnings" resultMap="BaseResultMap">
+    select date_str as date, tmp.num_count as limit_type,count(1) as limit_num,AVG(tmp.close_price_rate) as avg_close,AVG(tmp.open_price_rate) as avg_open,AVG(tmp.max_price_rate) as avg_max ,AVG(tmp.min_price_rate) as avg_min,0 as is_broken from
+    (
+    SELECT
+        case ul.sequence_count
+            WHEN '1' then '1'
+            WHEN '2' then '2'
+            WHEN '3' THEN '3'
+            ELSE '3+'
+            END
+        as num_count,
+        sd.close_price_rate,sd.open_price_rate,sd.max_price_rate,sd.min_price_rate,sd.date_str
+        FROM `t_up_limit` ul
+        inner join t_stock_detail sd on ul.`code`=sd.`code`
+        where ul.date=#{lastTradingDateStr,jdbcType=VARCHAR} and sd.date_str=#{dateStr,jdbcType=VARCHAR}
+    ) tmp group by tmp.num_count  ORDER BY num_count
+  </select>
+
+  <select id="countBrokenEarnings" resultMap="BaseResultMap">
+    select date_str as date, tmp.num_count as limit_type,count(1) as limit_num,AVG(tmp.close_price_rate) as avg_close,AVG(tmp.open_price_rate) as avg_open,AVG(tmp.max_price_rate) as avg_max ,AVG(tmp.min_price_rate) as avg_min,1 as is_broken from
+    (
+    SELECT
+        case bl.broken_limit_type
+            WHEN '首板' then '1'
+            WHEN '2板' then '2'
+            WHEN '3板' THEN '3'
+            ELSE '3+'
+            END
+        as num_count,
+        sd.close_price_rate,sd.open_price_rate,sd.max_price_rate,sd.min_price_rate,sd.date_str
+        FROM `t_broken_limit` bl
+	    inner join t_stock_detail sd on bl.`code`=sd.`code`
+	    where bl.date=#{lastTradingDateStr,jdbcType=VARCHAR} and sd.date_str=#{dateStr,jdbcType=VARCHAR}
+    ) tmp group by tmp.num_count ORDER BY num_count
+  </select>
+
+  <insert id="batchInsertOrUpdate">
+    insert into t_limit_earnings (date,limit_type,limit_num,avg_open,avg_close,avg_max,avg_min,is_broken,emotional_flag)
+    values
+    <foreach collection="records" index="index" item="record" separator=",">
+      (#{record.date},#{record.limitType},#{record.limitNum},#{record.avgOpen},#{record.avgClose},#{record.avgMax},#{record.avgMin}
+      ,#{record.isBroken},#{record.emotionalFlag})
+    </foreach>
+    ON DUPLICATE KEY UPDATE date=values(date),limit_type=values(limit_type),limit_num=values(limit_num),avg_open=values(avg_open)
+    ,avg_close=values(avg_close)
+    ,avg_max=values(avg_max),avg_min=values(avg_min),is_broken=values(is_broken),emotional_flag=values(emotional_flag)
+  </insert>
+
 </mapper>

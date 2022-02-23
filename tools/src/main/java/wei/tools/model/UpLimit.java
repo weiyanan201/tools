@@ -7,6 +7,8 @@ public class UpLimit {
 
     private String name;
 
+    private String firstTime;
+
     private String lastTime;
 
     private String date;
@@ -99,5 +101,13 @@ public class UpLimit {
 
     public void setLimitType(String limitType) {
         this.limitType = limitType;
+    }
+
+    public String getFirstTime() {
+        return firstTime;
+    }
+
+    public void setFirstTime(String firstTime) {
+        this.firstTime = firstTime;
     }
 }

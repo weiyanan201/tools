@@ -19,4 +19,25 @@ public class DecimalUtils {
     public static float roundValue(float number){
         return new BigDecimal(number).setScale(2,BigDecimal.ROUND_HALF_UP).floatValue();
     }
+
+    public static float roundValue(BigDecimal bigDecimal){
+        return bigDecimal.setScale(2,BigDecimal.ROUND_HALF_UP).floatValue();
+    }
+
+    public static void main(String[] args) {
+        BigDecimal bigDecimal = new BigDecimal(133.446667);
+        System.out.println(covertPercent(bigDecimal));
+    }
+
+    /**
+     * 两位小数百分号
+     * @param bigDecimal
+     * @return
+     */
+    public static String covertPercent(BigDecimal bigDecimal){
+        DecimalFormat df = new DecimalFormat("0.00%");
+        return df.format(bigDecimal.floatValue());
+    }
+
+
 }

@@ -70,6 +70,7 @@ public class WenCaiService {
     private static String FIELD_NAME = "股票简称";
     private static String FIELD_LAST_TIME_FORMAT = "最终涨停时间[%s]";
     private static String FIELD_OPEN_COUNT_FORMAT = "涨停开板次数[%s]";
+    private static String FIELD_FIRST_TIME_FORMAT = "首次涨停时间[%s]";
 
     //跌停字段
     private static String FIELD_DROP_TYPE_FORMAT = "跌停类型[%s]";
@@ -298,6 +299,7 @@ public class WenCaiService {
         String field_name = FIELD_NAME;
         String field_last_time = String.format(FIELD_LAST_TIME_FORMAT,dateStr);
         String field_open_count = String.format(FIELD_OPEN_COUNT_FORMAT,dateStr);
+        String field_first_time = String.format(FIELD_FIRST_TIME_FORMAT,dateStr);
 
         List<UpLimit> lists = Lists.newArrayList();
 
@@ -330,6 +332,7 @@ public class WenCaiService {
             upLimit.setSequenceType(js.getString(field_sequence_type));
             upLimit.setSequenceCount(js.getInteger(field_sequence_count));
             upLimit.setName(js.getString(field_name));
+            upLimit.setFirstTime(js.getString(field_first_time));
             upLimit.setLastTime(js.getString(field_last_time));
             upLimit.setOpenCount(js.getInteger(field_open_count));
             lists.add(upLimit);

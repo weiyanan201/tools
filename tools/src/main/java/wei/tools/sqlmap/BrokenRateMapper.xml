@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="wei.tools.dao.BrokenRateMapper">
+  <resultMap id="BaseResultMap" type="wei.tools.model.BrokenRate">
+    <result column="date" jdbcType="VARCHAR" property="date" />
+    <result column="limit_count" jdbcType="INTEGER" property="limitCount" />
+    <result column="broken_count" jdbcType="INTEGER" property="brokenCount" />
+    <result column="broken_rate" jdbcType="DECIMAL" property="brokenRate" />
+    <result column="first_limit_count" jdbcType="INTEGER" property="firstLimitCount" />
+    <result column="first_broken_count" jdbcType="INTEGER" property="firstBrokenCount" />
+    <result column="first_broken_rate" jdbcType="DECIMAL" property="firstBrokenRate" />
+    <result column="second_limit_count" jdbcType="INTEGER" property="secondLimitCount" />
+    <result column="second_broken_count" jdbcType="INTEGER" property="secondBrokenCount" />
+    <result column="second_broken_rate" jdbcType="DECIMAL" property="secondBrokenRate" />
+    <result column="third_limit_count" jdbcType="INTEGER" property="thirdLimitCount" />
+    <result column="third_broken_count" jdbcType="INTEGER" property="thirdBrokenCount" />
+    <result column="third_broken_rate" jdbcType="DECIMAL" property="thirdBrokenRate" />
+    <result column="more_limit_count" jdbcType="INTEGER" property="moreLimitCount" />
+    <result column="more_broken_count" jdbcType="INTEGER" property="moreBrokenCount" />
+    <result column="more_broken_rate" jdbcType="DECIMAL" property="moreBrokenRate" />
+  </resultMap>
+  <insert id="insert" parameterType="wei.tools.model.BrokenRate">
+    insert into t_broken_rate (date,limit_count,broken_count,broken_rate, first_limit_count, first_broken_count,
+      first_broken_rate, second_limit_count, second_broken_count, 
+      second_broken_rate, third_limit_count, third_broken_count, 
+      third_broken_rate, more_limit_count, more_broken_count, 
+      more_broken_rate)
+    values (#{date,jdbcType=VARCHAR}, #{limitCount,jdbcType=INTEGER}, #{brokenCount,jdbcType=INTEGER}, #{brokenRate,jdbcType=DECIMAL},
+      #{firstLimitCount,jdbcType=INTEGER}, #{firstBrokenCount,jdbcType=INTEGER},
+      #{firstBrokenRate,jdbcType=DECIMAL}, #{secondLimitCount,jdbcType=INTEGER}, #{secondBrokenCount,jdbcType=INTEGER}, 
+      #{secondBrokenRate,jdbcType=DECIMAL}, #{thirdLimitCount,jdbcType=INTEGER}, #{thirdBrokenCount,jdbcType=INTEGER}, 
+      #{thirdBrokenRate,jdbcType=DECIMAL}, #{moreLimitCount,jdbcType=INTEGER}, #{moreBrokenCount,jdbcType=INTEGER}, 
+      #{moreBrokenRate,jdbcType=DECIMAL})
+    ON DUPLICATE KEY UPDATE
+      date=values(date),limit_count=values(limit_count),broken_count=values(broken_count),broken_rate=values(broken_rate)
+      ,first_limit_count=values(first_limit_count),first_broken_count=values(first_broken_count),first_broken_rate=values(first_broken_rate)
+      ,second_limit_count=values(second_limit_count),second_broken_count=values(second_broken_count),second_broken_rate=values(second_broken_rate)
+      ,third_limit_count=values(third_limit_count),third_broken_count=values(third_broken_count),third_broken_rate=values(third_broken_rate)
+      ,more_limit_count=values(more_limit_count),more_broken_count=values(more_broken_count),more_broken_rate=values(more_broken_rate)
+  </insert>
+  <select id="findAll" resultMap="BaseResultMap">
+    select date, limit_count,broken_count,broken_rate,first_limit_count, first_broken_count, first_broken_rate, second_limit_count,
+    second_broken_count, second_broken_rate, third_limit_count, third_broken_count, third_broken_rate, 
+    more_limit_count, more_broken_count, more_broken_rate
+    from t_broken_rate
+  </select>
+
+  <select id="queryByDate" resultMap="BaseResultMap">
+
+    select tmp_u.date,
+        u_first+u_second+u_third+u_more as limit_count,
+        b_first+b_second+b_third+b_more as broken_count,
+        (b_first+b_second+b_third+b_more)/(u_first+u_second+u_third+u_more+b_first+b_second+b_third+b_more) as broken_rate,
+        u_first as first_limit_count,b_first as first_broken_count,b_first/(u_first+b_first) as first_broken_rate ,
+        u_second as second_limit_count,b_second as second_broken_count ,b_second/(u_second+b_second) as second_broken_rate,
+        u_third as third_limit_count,b_third as third_broken_count,b_third/(u_third+b_third) as third_broken_rate,
+        u_more as more_limit_count,b_more as more_broken_count,b_more/(u_more+b_more) as more_broken_rate
+
+    from
+    (
+        select a.date,
+            max(case a.limit_num when '1' then a.ct else 0 end ) u_first ,
+            max(case a.limit_num when '2' then a.ct else 0 end ) u_second ,
+            max(case a.limit_num when '3' then a.ct else 0 end ) u_third ,
+            max(case a.limit_num when '3+' then a.ct else 0 end ) u_more
+        from
+        (
+            select date,
+                case ul.sequence_count
+                                    WHEN '1' then '1'
+                                    WHEN '2' then '2'
+                                    WHEN '3' THEN '3'
+                                    ELSE '3+'
+                                    END
+                as limit_num,count(1) as ct
+            from t_up_limit ul where date=#{dateStr} GROUP BY limit_num order by limit_num
+        ) a GROUP BY a.date
+    ) tmp_u
+    join
+    (
+        select b.date,
+            max(case b.limit_num when '1' then b.ct else 0 end ) b_first ,
+            max(case b.limit_num when '2' then b.ct else 0 end ) b_second ,
+            max(case b.limit_num when '3' then b.ct else 0 end ) b_third ,
+            max(case b.limit_num when '3+' then b.ct else 0 end ) b_more
+        from
+        (
+            select date,
+                case bl.broken_limit_type
+                                    WHEN '首板' then '1'
+                                    WHEN '2板' then '2'
+                                    WHEN '3板' THEN '3'
+                                    ELSE '3+'
+                                    END
+                as limit_num,count(1) as ct
+            from t_broken_limit bl where date=#{dateStr} GROUP BY limit_num order by limit_num
+        ) b GROUP BY b.date
+    ) tmp_b
+    on tmp_u.date=tmp_b.date
+  </select>
+
+</mapper>

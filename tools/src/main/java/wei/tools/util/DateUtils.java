@@ -3,6 +3,8 @@ package wei.tools.util;
 import org.apache.commons.lang3.StringUtils;
 import wei.tools.exception.ToolsException;
 
+import javax.script.*;
+import java.io.*;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -22,6 +24,7 @@ public class DateUtils {
 
     //dateFormat 正则校验
     private static Pattern datePattern = Pattern.compile("^(20\\d{2})-((0{1}[0-9]{1})|(1{1}[0-2]{1}))-((0{1}[1-9]{1})|([1-2]{1}[0-9]{1})|(3{1}[0-1]{1})){1}$");
+    private static Pattern unSymbolDatePattern = Pattern.compile("^(20\\d{2})((0{1}[0-9]{1})|(1{1}[0-2]{1}))((0{1}[1-9]{1})|([1-2]{1}[0-9]{1})|(3{1}[0-1]{1})){1}$");
 
     public static String getDateFormat(){
         return dateFormatStr;
@@ -47,6 +50,15 @@ public class DateUtils {
             return true;
         }
         throw new ToolsException("日期格式不正确，请传入yyyy-MM-dd 格式");
+    }
+
+    public static boolean checkUnSymbolFormat(String dateStr)  {
+
+        Matcher matcher = unSymbolDatePattern.matcher(dateStr);
+        if (matcher.find()){
+            return true;
+        }
+        throw new ToolsException("日期格式不正确，请传入yyyyMMdd 格式");
     }
 
     /**
@@ -89,19 +101,38 @@ public class DateUtils {
         return betweenDays.intValue();
     }
 
-    public static void main(String[] args) throws ParseException {
+    public static String str;
 
-//        String str = "[2022年1月4日的涨跌幅>0% (3309)2022年1月4日的涨跌幅<0% (1310)";
-//        Pattern pattern = Pattern.compile("\\((\\d+)+\\).*\\((\\d+)+\\)");
-//        Matcher matcher = pattern.matcher(str);
-//        if (matcher.find()){
-//            System.out.println(matcher.group(1));
-//            System.out.println(matcher.group(2));
-//        }
+    public static void main(String[] args) throws Exception {
+//        testJSFile();
+        String str = "20220222";
+        Matcher matcher = unSymbolDatePattern.matcher(str);
+        if (matcher.find()){
+            System.out.println(matcher.group());
+        }
+    }
 
+    private static void testJSFile() throws Exception {
+        ScriptEngineManager mgr = new ScriptEngineManager();
+        ScriptEngine engine = mgr.getEngineByName("javascript");
+        engine.eval(readJSFile());
+        Invocable inv = (Invocable) engine;
+        Object res = (Object) inv.invokeFunction("v");
+        System.out.println("res:" + res);
+    }
 
-        System.out.println(DateUtils.getNextDay("2021-01-31"));
-
+    private static String readJSFile() throws Exception {
+        StringBuffer script = new StringBuffer();
+        File file = new File("C:\\Users\\homay\\Desktop\\aes.min.js");
+        FileReader filereader = new FileReader(file);
+        BufferedReader bufferreader = new BufferedReader(filereader);
+        String tempString = null;
+        while ((tempString = bufferreader.readLine()) != null) {
+            script.append(tempString).append("\n");
+        }
+        bufferreader.close();
+        filereader.close();
+        return script.toString();
     }
 
 }
