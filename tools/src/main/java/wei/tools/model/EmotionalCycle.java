@@ -1,5 +1,7 @@
 package wei.tools.model;
 
+import wei.tools.util.DecimalUtils;
+
 import java.math.BigDecimal;
 
 public class EmotionalCycle {
@@ -227,20 +229,18 @@ public class EmotionalCycle {
                 ", earningSequenceLimitReate=" + earningSequenceLimitReate +
                 ", earningBrokenLimitRate=" + earningBrokenLimitRate +
                 ", hotBusinessOrderLimit='" + hotBusinessOrderLimit + '\'' +
-                ", hotBusinessOrderRose='" + hotBusinessOrderRose + '\'' +
                 ", hotThemeOrderLimit='" + hotThemeOrderLimit + '\'' +
-                ", hotThemeOrderRose='" + hotThemeOrderRose + '\'' +
                 '}';
     }
 
     public String openQueryToString(){
-        return "EmotionalCycle{" +
-                "dateStr='" + dateStr + '\'' +
-                ", upCount=" + upCount +
+        return "{" +
+                "upCount=" + upCount +
                 ", dropCount=" + dropCount +
                 ", upLimit=" + upLimit +
                 ", dropLimit=" + dropLimit +
                 ", brokenLimit=" + brokenLimit +
+                ", brokenRate="+ DecimalUtils.covertPercent((float) (1.0*brokenLimit/(brokenLimit+upLimit))) +
                 ", firstLimit=" + firstLimit +
                 ", secondLimit=" + secondLimit +
                 ", thirdLimit=" + thirdLimit +
@@ -248,6 +248,8 @@ public class EmotionalCycle {
                 ", moreLimit=" + moreLimit +
                 ", moreLimitStr='" + moreLimitStr + '\'' +
                 ", hotBusinessOrderLimit='" + hotBusinessOrderLimit + '\'' +
+                ", hotThemeOrderLimit='" + hotThemeOrderLimit + '\'' +
                 '}';
     }
+
 }

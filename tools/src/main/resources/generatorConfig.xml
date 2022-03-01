@@ -48,7 +48,7 @@
         </javaClientGenerator>
 
 
-        <table schema="tools" tableName="t_limit_earnings"  domainObjectName="LimitEarnings"
+        <table schema="tools" tableName="t_broken_rate"  domainObjectName="BrokenRate"
                 enableInsert="true" enableSelectByExample="false" enableDeleteByPrimaryKey="false"
                 enableDeleteByExample="false" enableCountByExample="false" enableUpdateByExample="false">
             <property name="selectAllOrderByClause" value=""/>

@@ -39,5 +39,9 @@ public class DecimalUtils {
         return df.format(bigDecimal.floatValue());
     }
 
+    public static String covertPercent(float number){
+        DecimalFormat df = new DecimalFormat("0.00%");
+        return df.format(number);
+    }
 
 }

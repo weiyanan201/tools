@@ -70,7 +70,7 @@ public class ExcelService {
         int insertNum = insertRow.getRowNum()+1;
 
         //写入数据
-        short height = 650;
+        short height = 800;
         insertRow.setHeight(height);
         //日期
         Cell cell1 = insertRow.createCell(0);
@@ -99,13 +99,15 @@ public class ExcelService {
         //cell7 炸板率excel自己计算
         Cell cell7 = insertRow.createCell(6);
         cell7.setCellStyle(sheet.getColumnStyle(6));
-        String cell7Format = "F%d/(D%d+F%d)";
-        cell7.setCellFormula(String.format(cell7Format,insertNum,insertNum,insertNum));
+//        String cell7Format = "F%d/(D%d+F%d)";
+//        cell7.setCellFormula(String.format(cell7Format,insertNum,insertNum,insertNum));
+        cell7.setCellValue(DecimalUtils.covertPercent((float) (1.0*emotionalCycle.getBrokenLimit()/(emotionalCycle.getUpLimit()+emotionalCycle.getBrokenLimit()))));
         //cell8 首板excel自己计算
         Cell cell8 = insertRow.createCell(7);
         cell8.setCellStyle(sheet.getColumnStyle(7));
-        String cell8Format = "D%d-I%d-J%d-L%d";
-        cell8.setCellFormula(String.format(cell8Format,insertNum,insertNum,insertNum,insertNum));
+//        String cell8Format = "D%d-I%d-J%d-L%d";
+//        cell8.setCellFormula(String.format(cell8Format,insertNum,insertNum,insertNum,insertNum));
+        cell8.setCellValue(emotionalCycle.getFirstLimit());
         //2板
         Cell cell9 = insertRow.createCell(8);
         cell9.setCellStyle(sheet.getColumnStyle(8));
@@ -129,10 +131,13 @@ public class ExcelService {
         //热门板块
         Cell cell14 = insertRow.createCell(13);
         cell14.setCellStyle(sheet.getColumnStyle(13));
-        cell14.setCellValue(emotionalCycle.getHotBusinessOrderLimit());
+        cell14.setCellValue(emotionalCycle.getHotThemeOrderLimit());
+        //热门题材
+        Cell cell15 = insertRow.createCell(14);
+        cell15.setCellStyle(sheet.getColumnStyle(14));
+        cell15.setCellValue(emotionalCycle.getHotBusinessOrderLimit());
 
-
-        formulaEvaluator.evaluateAll();
+//        formulaEvaluator.evaluateAll();
 
         FileOutputStream out = new FileOutputStream(excelFilePath);
         wb.write(out);
@@ -255,7 +260,7 @@ public class ExcelService {
         cell16.setCellStyle(sheet.getColumnStyle(15));
         cell16.setCellValue(DecimalUtils.covertPercent(brokenRate.getMoreBrokenRate()));
 
-        formulaEvaluator.evaluateAll();
+//        formulaEvaluator.evaluateAll();
 
         FileOutputStream out = new FileOutputStream(excelFilePath);
         wb.write(out);

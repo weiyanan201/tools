@@ -20,7 +20,7 @@ class StockReviewTests {
 
 	@Test
 	void testFixData() throws ParseException, IOException, InterruptedException {
-		List<String> days = tradingDayService.getPeriodTradingDays("2022-02-09","2022-02-09");
+		List<String> days = tradingDayService.getPeriodTradingDays("2022-02-22","2022-02-25");
 		for (String day : days){
 			stockReviewService.reviewByDate(day,true);
 			Thread.sleep(1000l*30);
@@ -29,12 +29,17 @@ class StockReviewTests {
 
 	@Test
 	void testReviewByDate() throws IOException, ParseException {
-		stockReviewService.reviewByDate("2022-02-21");
+		stockReviewService.reviewByDate("2022-02-28");
 	}
 
 	@Test
 	void testOpening() throws IOException, ParseException {
-		stockReviewService.openingQuery("2022-02-22");
+		stockReviewService.openingQuery("2022-03-01");
+	}
+
+	@Test
+	void testOpenLoop() throws IOException, ParseException, InterruptedException {
+		stockReviewService.openLoopQuery();
 	}
 
 	@Test

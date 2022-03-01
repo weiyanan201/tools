@@ -6,6 +6,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import wei.tools.dao.*;
 import wei.tools.exception.ToolsException;
@@ -13,8 +14,15 @@ import wei.tools.model.*;
 import wei.tools.util.DateUtils;
 import wei.tools.util.DecimalUtils;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.text.DateFormat;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -27,6 +35,11 @@ import java.util.Map;
 public class StockReviewService {
 
     private static Logger logger = LoggerFactory.getLogger(StockReviewService.class);
+
+    @Value("${review.tradingLogPath}")
+    private String tradingLogPath ;
+    @Value("${review.openingLoopIntervalSec}")
+    private int openingLoopIntervalSec;
 
     @Autowired
     private WenCaiService wenCaiService;
@@ -145,7 +158,7 @@ public class StockReviewService {
      * @throws IOException
      * @throws ParseException
      */
-    public void openingQuery(String dateStr) throws IOException, ParseException {
+    public EmotionalCycle openingQuery(String dateStr) throws IOException, ParseException {
         DateUtils.checkFormat(dateStr);
         if (!tradingDayService.isTradingDay(dateStr)){
             throw new ToolsException("查询日期为非交易日!");
@@ -164,10 +177,89 @@ public class StockReviewService {
         wenCaiService.queryHotBusiness(emotionalCycle,dateStr);
 
         System.out.println(emotionalCycle.openQueryToString());
+        return emotionalCycle;
     }
 
-    public static void main(String[] args) {
-        String code = "002068.SZ";
-        System.out.println(code.substring(0,6));
+    public void openLoopQuery() throws IOException, ParseException, InterruptedException {
+        String dateStr = DateUtils.getTodayStr();
+        openLoopQuery(dateStr);
+    }
+    /**
+     * 盘中循环监控情绪
+     */
+    public void openLoopQuery(String dateStr) throws IOException, ParseException, InterruptedException {
+
+        DateUtils.checkFormat(dateStr);
+        if (!tradingDayService.isTradingDay(dateStr)){
+            throw new ToolsException("查询日期为非交易日!");
+        }
+        File file = new File(tradingLogPath);
+        if (!file.exists()){
+            file.createNewFile();
+        }
+
+        while(true){
+            if (isOpening()){
+                try{
+                    FileWriter fileWriter = new FileWriter(file,true);
+                    //TODO
+//                dateStr = "2022-02-23";
+                    EmotionalCycle emotionalCycle = openingQuery(dateStr);
+                    StringBuilder sb = new StringBuilder();
+
+                    sb.append(DateUtils.getNowDateTime())
+                            .append(" ")
+                            .append(emotionalCycle.openQueryToString())
+                            .append("\n");
+                    fileWriter.write(sb.toString());
+                    fileWriter.flush();
+                }catch (Exception exception){
+                    logger.error("openLoopQuery is error : ",exception);
+                }
+
+            }
+            Thread.sleep(openingLoopIntervalSec*1000L);
+        }
+
+    }
+
+    public static boolean isOpening() throws ParseException {
+        DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+        Date now = new Date();
+        String todayStr = format.format(now);
+        Date todayDate = format.parse(todayStr);
+
+
+        Calendar amOpenCal = Calendar.getInstance();
+        amOpenCal.setTime(todayDate);
+        amOpenCal.set(Calendar.HOUR,9);
+        amOpenCal.set(Calendar.MINUTE,30);
+
+        Calendar amCloseCal = Calendar.getInstance();
+        amCloseCal.setTime(todayDate);
+        amCloseCal.set(Calendar.HOUR,11);
+        amCloseCal.set(Calendar.MINUTE,30);
+
+        Calendar pmOpenCal = Calendar.getInstance();
+        pmOpenCal.setTime(todayDate);
+        pmOpenCal.set(Calendar.HOUR,13);
+        pmOpenCal.set(Calendar.MINUTE,00);
+
+        Calendar pmCloseCal = Calendar.getInstance();
+        pmCloseCal.setTime(todayDate);
+        pmCloseCal.set(Calendar.HOUR,15);
+        pmCloseCal.set(Calendar.MINUTE,00);
+
+        if ((now.getTime()>=amOpenCal.getTime().getTime() && now.getTime()<=amCloseCal.getTime().getTime())
+                || (now.getTime()>=pmOpenCal.getTime().getTime() && now.getTime()<pmCloseCal.getTime().getTime())){
+            return true;
+        }
+
+        return false;
+    }
+
+    public static void main(String[] args) throws IOException, ParseException {
+        System.out.println(DateUtils.getNowDateTime());
+
     }
 }

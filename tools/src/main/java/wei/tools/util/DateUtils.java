@@ -21,6 +21,7 @@ public class DateUtils {
 
 
     private static String dateFormatStr="yyyy-MM-dd";
+    private static String dateTimeFormatStr = "yyyy-MM-dd HH:mm:ss";
 
     //dateFormat 正则校验
     private static Pattern datePattern = Pattern.compile("^(20\\d{2})-((0{1}[0-9]{1})|(1{1}[0-2]{1}))-((0{1}[1-9]{1})|([1-2]{1}[0-9]{1})|(3{1}[0-1]{1})){1}$");
@@ -39,6 +40,12 @@ public class DateUtils {
 
     public static String getTodayStr(){
         DateFormat format = new SimpleDateFormat(dateFormatStr);
+        Date today = new Date();
+        return format.format(today);
+    }
+
+    public static String getNowDateTime(){
+        DateFormat format = new SimpleDateFormat(dateTimeFormatStr);
         Date today = new Date();
         return format.format(today);
     }

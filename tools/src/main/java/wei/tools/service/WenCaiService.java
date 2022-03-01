@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.ResourceUtils;
 import wei.tools.dao.UpLimitMapper;
 import wei.tools.model.*;
+import wei.tools.util.CollectionUtils;
 import wei.tools.util.DateUtils;
 import wei.tools.util.DecimalUtils;
 
@@ -302,6 +303,8 @@ public class WenCaiService {
         String field_first_time = String.format(FIELD_FIRST_TIME_FORMAT,dateStr);
 
         List<UpLimit> lists = Lists.newArrayList();
+        //处理reason 统计题材
+        Map<String,Integer> themeMap = Maps.newHashMap();
 
         JSONObject dataJson = zhangtingResult.getJSONObject("data");
         JSONArray answerArray = dataJson.getJSONArray("answer");
@@ -320,6 +323,19 @@ public class WenCaiService {
             upLimit.setDate(dateStr);
             upLimit.setLimitType(js.getString(field_limit_type));
             upLimit.setReason(StringUtils.isBlank(js.getString(field_limit_reason))?"-":js.getString(field_limit_reason));
+            if (!StringUtils.isBlank(js.getString(field_limit_reason))){
+                String[] themes = js.getString(field_limit_reason).split("\\+");
+                for (String theme :themes){
+                    if (StringUtils.containsIgnoreCase(theme,"ST")){
+                        continue;
+                    }
+                    if (!themeMap.containsKey(theme)){
+                        themeMap.put(theme,new Integer(0));
+                    }
+                    themeMap.put(theme,themeMap.get(theme)+1);
+                }
+            }
+
             String code = js.getString(field_code);
             if (isHistory && isST(code,js.getString(field_name),dateStr)){
                 continue;
@@ -337,6 +353,23 @@ public class WenCaiService {
             upLimit.setOpenCount(js.getInteger(field_open_count));
             lists.add(upLimit);
         }
+
+        Map<String,Integer> sortedThemeMap = CollectionUtils.sortByValueDesc(themeMap);
+        StringBuilder sb = new StringBuilder();
+        int count = 0;
+        //题材取前5个
+        for (Map.Entry<String,Integer> entry : sortedThemeMap.entrySet()){
+            count++;
+            if (count<=5){
+                sb.append(entry.getKey()).append(":").append(entry.getValue()).append(",");
+            }else{
+                break;
+            }
+        }
+        if (sb.indexOf(",")!=-1){
+            sb.delete(sb.lastIndexOf(","),sb.length());
+        }
+        emotionalCycle.setHotThemeOrderLimit(sb.toString());
 
         int totalCount = 0;
         int firstCount = 0;
@@ -372,6 +405,7 @@ public class WenCaiService {
                 return o2.getValue()-o1.getValue();
             }
         };
+
         // map转换成list进行排序
         List<Map.Entry<String, Integer>> sortList = new ArrayList<Map.Entry<String,Integer>>(moreMap.entrySet());
         // 排序
@@ -415,6 +449,8 @@ public class WenCaiService {
 
         return true;
     }
+
+
 
 
     /**

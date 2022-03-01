@@ -52,14 +52,11 @@
     from t_emotional_cycle
   </select>
 
-  <insert id="batchInsertOrUpdate">
-    insert into t_emotional_cycle (code,name,last_time,date,reason,open_count,sequence_count,sequence_type,limit_type)
-    values
-    <foreach collection="records" index="index" item="record" separator=",">
-      (#{record.code},#{record.name},#{record.lastTime},#{record.date},#{record.reason},#{record.openCount},#{record.sequenceCount}
-      ,#{record.sequenceType},#{record.limitType})
-    </foreach>
-    ON DUPLICATE KEY UPDATE code=values(code),name=values(name),last_time=values(last_time),date=values(date),reason=values(reason)
-    ,open_count=values(open_count),sequence_count=values(sequence_count),sequence_type=values(sequence_type),limit_type=values(limit_type)
-  </insert>
+
+  <select id="selectByDate"  resultMap="BaseResultMap">
+    select *
+    from t_emotional_cycle
+    where date_str = #{dateStr}
+  </select>
+
 </mapper>
