@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="wei.tools.dao.TimeSlotHoldRateMapper">
+  <resultMap id="BaseResultMap" type="wei.tools.model.TimeSlotHoldRate">
+    <result column="date" jdbcType="VARCHAR" property="date" />
+    <result column="time_slot" jdbcType="INTEGER" property="timeSlot" />
+    <result column="f_count" jdbcType="INTEGER" property="fCount" />
+    <result column="broken_lost" jdbcType="DECIMAL" property="brokenLost" />
+    <result column="open_rate" jdbcType="DECIMAL" property="openRate" />
+    <result column="max_rate" jdbcType="DECIMAL" property="maxRate" />
+    <result column="min_rate" jdbcType="DECIMAL" property="minRate" />
+    <result column="close_rate" jdbcType="DECIMAL" property="closeRate" />
+    <result column="is_broken" jdbcType="INTEGER" property="isBroken" />
+    <result column="is_first" jdbcType="INTEGER" property="isFirst" />
+    <result column="hold_rate" jdbcType="DECIMAL" property="holdRate" />
+  </resultMap>
+  <insert id="insert" parameterType="wei.tools.model.TimeSlotHoldRate">
+    insert into t_time_slot_hold_rate (date, time_slot, f_count, 
+      broken_lost, open_rate, max_rate, 
+      min_rate, close_rate, is_broken, 
+      is_first, hold_rate)
+    values (#{date,jdbcType=VARCHAR}, #{timeSlot,jdbcType=INTEGER}, #{fCount,jdbcType=INTEGER}, 
+      #{brokenLost,jdbcType=DECIMAL}, #{openRate,jdbcType=DECIMAL}, #{maxRate,jdbcType=DECIMAL}, 
+      #{minRate,jdbcType=DECIMAL}, #{closeRate,jdbcType=DECIMAL}, #{isBroken,jdbcType=INTEGER}, 
+      #{isFirst,jdbcType=INTEGER}, #{holdRate,jdbcType=DECIMAL})
+  </insert>
+  <select id="findAll" resultMap="BaseResultMap">
+    select date, time_slot, f_count, broken_lost, open_rate, max_rate, min_rate, close_rate, 
+    is_broken, is_first, hold_rate
+    from t_time_slot_hold_rate
+  </select>
+
+  <select id="queryByDate" resultMap="BaseResultMap">
+
+    select t_limit.is_broken,
+        t_limit.time_type as time_slot,
+        count(1) as f_count,
+        ROUND(avg(t_limit.lost),2) as broken_lost,
+        ROUND(avg(t_detail.open_price_rate),2) as open_rate,
+        ROUND(avg(t_detail.max_price_rate),2)as max_rate,
+        ROUND(avg(t_detail.min_price_rate),2) as min_rate,
+        ROUND(avg(t_detail.close_price_rate),2) as close_rate
+    from
+      (
+      SELECT code,name,0 as is_broken ,0 as lost,
+        case
+        when STR_TO_DATE(ul.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('10:00:00','%H:%i:%s') then '1'
+        when STR_TO_DATE(ul.first_time,'%H:%i:%s') &gt; STR_TO_DATE('10:00:00','%H:%i:%s') and STR_TO_DATE(ul.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('10:30:00','%H:%i:%s') then '2'
+        when STR_TO_DATE(ul.first_time,'%H:%i:%s') &gt; STR_TO_DATE('10:30:00','%H:%i:%s') and STR_TO_DATE(ul.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('11:00:00','%H:%i:%s') then '3'
+        when STR_TO_DATE(ul.first_time,'%H:%i:%s') &gt; STR_TO_DATE('11:00:00','%H:%i:%s') and STR_TO_DATE(ul.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('11:30:00','%H:%i:%s') then '4'
+        when STR_TO_DATE(ul.first_time,'%H:%i:%s') &gt;= STR_TO_DATE('13:00:00','%H:%i:%s') and STR_TO_DATE(ul.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('13:30:00','%H:%i:%s') then '5'
+        when STR_TO_DATE(ul.first_time,'%H:%i:%s') &gt; STR_TO_DATE('13:30:00','%H:%i:%s') and STR_TO_DATE(ul.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('14:00:00','%H:%i:%s') then '6'
+        when STR_TO_DATE(ul.first_time,'%H:%i:%s') &gt; STR_TO_DATE('14:00:00','%H:%i:%s') and STR_TO_DATE(ul.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('14:30:00','%H:%i:%s') then '7'
+        when STR_TO_DATE(ul.first_time,'%H:%i:%s') &gt; STR_TO_DATE('14:30:00','%H:%i:%s') and STR_TO_DATE(ul.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('15:00:00','%H:%i:%s') then '8'
+        ELSE '0'
+        end as time_type
+      FROM  t_up_limit ul where  date=#{lastDateStr} and ul.sequence_count=1
+
+      UNION
+
+      SELECT code,name,1 as is_broken ,loss_rate as lost,
+        case
+        when STR_TO_DATE(bl.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('10:00:00','%H:%i:%s') then '1'
+        when STR_TO_DATE(bl.first_time,'%H:%i:%s') &gt; STR_TO_DATE('10:00:00','%H:%i:%s') and STR_TO_DATE(bl.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('10:30:00','%H:%i:%s') then '2'
+        when STR_TO_DATE(bl.first_time,'%H:%i:%s') &gt; STR_TO_DATE('10:30:00','%H:%i:%s') and STR_TO_DATE(bl.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('11:00:00','%H:%i:%s') then '3'
+        when STR_TO_DATE(bl.first_time,'%H:%i:%s') &gt; STR_TO_DATE('11:00:00','%H:%i:%s') and STR_TO_DATE(bl.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('11:30:00','%H:%i:%s') then '4'
+        when STR_TO_DATE(bl.first_time,'%H:%i:%s') &gt;= STR_TO_DATE('13:00:00','%H:%i:%s') and STR_TO_DATE(bl.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('13:30:00','%H:%i:%s') then '5'
+        when STR_TO_DATE(bl.first_time,'%H:%i:%s') &gt; STR_TO_DATE('13:30:00','%H:%i:%s') and STR_TO_DATE(bl.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('14:00:00','%H:%i:%s') then '6'
+        when STR_TO_DATE(bl.first_time,'%H:%i:%s') &gt; STR_TO_DATE('14:00:00','%H:%i:%s') and STR_TO_DATE(bl.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('14:30:00','%H:%i:%s') then '7'
+        when STR_TO_DATE(bl.first_time,'%H:%i:%s') &gt; STR_TO_DATE('14:30:00','%H:%i:%s') and STR_TO_DATE(bl.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('15:00:00','%H:%i:%s') then '8'
+        ELSE '0'
+        end as time_type
+      FROM  t_broken_limit bl where  bl.date=#{lastDateStr} and bl.broken_limit_type='首板'
+
+      ) t_limit
+    join
+      ( select * from t_stock_detail sd where date_str=#{dateStr}) t_detail
+    on t_limit.code=t_detail.code
+    group by t_limit.is_broken,t_limit.time_type
+  </select>
+
+  <insert id="batchInsertOrUpdate">
+    insert into t_time_slot_hold_rate (date, time_slot, f_count,
+    broken_lost, open_rate, max_rate,
+    min_rate, close_rate, is_broken,
+    is_first, hold_rate)
+    values
+    <foreach collection="records" index="index" item="record" separator=",">
+      (#{record.date}, #{record.timeSlot}, #{record.fCount},
+      #{record.brokenLost}, #{record.openRate}, #{record.maxRate},
+      #{record.minRate}, #{record.closeRate}, #{record.isBroken},
+      #{record.isFirst}, #{record.holdRate})
+    </foreach>
+    ON DUPLICATE KEY UPDATE date=values(date),time_slot=values(time_slot),f_count=values(f_count),broken_lost=values(broken_lost)
+    ,open_rate=values(open_rate),max_rate=values(max_rate),min_rate=values(min_rate),close_rate=values(close_rate)
+    ,is_broken=values(is_broken),is_first=values(is_first),hold_rate=values(hold_rate)
+  </insert>
+
+</mapper>
