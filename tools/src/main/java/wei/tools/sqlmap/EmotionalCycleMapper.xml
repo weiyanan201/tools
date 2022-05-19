@@ -16,8 +16,9 @@
     <result column="more_limit_str" jdbcType="VARCHAR" property="moreLimitStr" />
     <result column="earning_limit_rate" jdbcType="DECIMAL" property="earningLimitRate" />
     <result column="earning_first_limit_rate" jdbcType="DECIMAL" property="earningFirstLimitRate" />
-    <result column="earning_sequence_limit_reate" jdbcType="DECIMAL" property="earningSequenceLimitReate" />
+    <result column="earning_sequence_limit_rate" jdbcType="DECIMAL" property="earningSequenceLimitRate" />
     <result column="earning_broken_limit_rate" jdbcType="DECIMAL" property="earningBrokenLimitRate" />
+    <result column="earning_hot_rate" jdbcType="DECIMAL" property="earningHotRate" />
     <result column="hot_business_order_limit" jdbcType="VARCHAR" property="hotBusinessOrderLimit" />
     <result column="hot_business_order_rose" jdbcType="VARCHAR" property="hotBusinessOrderRose" />
     <result column="hot_theme_order_limit" jdbcType="VARCHAR" property="hotThemeOrderLimit" />
@@ -28,26 +29,28 @@
       up_limit, drop_limit, broken_limit,
       first_limit, second_limit, third_limit, third_limit_str,
       more_limit, more_limit_str, earning_limit_rate, earning_first_limit_rate,
-      earning_sequence_limit_reate, earning_broken_limit_rate,
+      earning_sequence_limit_rate, earning_broken_limit_rate,earning_hot_rate,
       hot_business_order_limit, hot_business_order_rose,
       hot_theme_order_limit, hot_theme_order_rose)
     values (#{dateStr,jdbcType=VARCHAR}, #{upCount,jdbcType=INTEGER}, #{dropCount,jdbcType=INTEGER}, 
       #{upLimit,jdbcType=INTEGER}, #{dropLimit,jdbcType=INTEGER}, #{brokenLimit,jdbcType=INTEGER}, 
       #{firstLimit,jdbcType=INTEGER}, #{secondLimit,jdbcType=INTEGER}, #{thirdLimit,jdbcType=INTEGER},  #{thirdLimitStr,jdbcType=VARCHAR},
       #{moreLimit,jdbcType=INTEGER}, #{moreLimitStr,jdbcType=VARCHAR}, #{earningLimitRate,jdbcType=DECIMAL}, #{earningFirstLimitRate,jdbcType=DECIMAL},
-      #{earningSequenceLimitReate,jdbcType=DECIMAL}, #{earningBrokenLimitRate,jdbcType=DECIMAL}, 
+      #{earningSequenceLimitRate,jdbcType=DECIMAL}, #{earningBrokenLimitRate,jdbcType=DECIMAL},#{earningHotRate,jdbcType=DECIMAL},
       #{hotBusinessOrderLimit,jdbcType=VARCHAR}, #{hotBusinessOrderRose,jdbcType=VARCHAR}, 
       #{hotThemeOrderLimit,jdbcType=VARCHAR}, #{hotThemeOrderRose,jdbcType=VARCHAR})
     ON DUPLICATE KEY UPDATE date_str=values(date_str),up_count=values(up_count),drop_count=values(drop_count),up_limit=values(up_limit),drop_limit=values(drop_limit)
     ,broken_limit=values(broken_limit),first_limit=values(first_limit),second_limit=values(second_limit),third_limit=values(third_limit)
     ,third_limit_str=values(third_limit_str),more_limit=values(more_limit),more_limit_str=values(more_limit_str),earning_limit_rate=values(earning_limit_rate),earning_first_limit_rate=values(earning_first_limit_rate)
-    ,earning_sequence_limit_reate=values(earning_sequence_limit_reate),earning_broken_limit_rate=values(earning_broken_limit_rate),hot_business_order_limit=values(hot_business_order_limit),hot_business_order_rose=values(hot_business_order_rose),hot_theme_order_limit=values(hot_theme_order_limit)
+    ,earning_sequence_limit_rate=values(earning_sequence_limit_rate),earning_broken_limit_rate=values(earning_broken_limit_rate),earning_hot_rate=values(earning_hot_rate)
+    ,hot_business_order_limit=values(hot_business_order_limit),hot_business_order_rose=values(hot_business_order_rose),hot_theme_order_limit=values(hot_theme_order_limit)
     ,hot_theme_order_rose=values(hot_theme_order_rose)
   </insert>
   <select id="findAll" resultMap="BaseResultMap">
     select date_str, up_count, drop_count, up_limit, drop_limit, broken_limit, first_limit, 
     second_limit, third_limit, third_limit_str,more_limit,more_limit_str, earning_limit_rate, earning_first_limit_rate,
-    earning_sequence_limit_reate, earning_broken_limit_rate, hot_business_order_limit, 
+    earning_sequence_limit_rate, earning_broken_limit_rate, earning_hot_rate,
+    hot_business_order_limit,
     hot_business_order_rose, hot_theme_order_limit, hot_theme_order_rose
     from t_emotional_cycle
   </select>
@@ -58,5 +61,14 @@
     from t_emotional_cycle
     where date_str = #{dateStr}
   </select>
+
+  <update id="fixUpdateEarningRate" parameterType="wei.tools.model.BrokenLimit">
+    update t_emotional_cycle
+    set earning_limit_rate = #{earningLimitRate,jdbcType=VARCHAR},
+      earning_sequence_limit_rate = #{earningSequenceLimitRate,jdbcType=VARCHAR},
+      earning_broken_limit_rate = #{earningBrokenLimitRate,jdbcType=VARCHAR},
+      earning_hot_rate = #{earningHotRate,jdbcType=VARCHAR}
+    where date_str = #{dateStr,jdbcType=INTEGER}
+  </update>
 
 </mapper>

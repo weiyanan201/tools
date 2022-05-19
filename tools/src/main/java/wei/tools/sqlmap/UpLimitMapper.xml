@@ -13,15 +13,16 @@
     <result column="sequence_count" jdbcType="INTEGER" property="sequenceCount" />
     <result column="sequence_type" jdbcType="VARCHAR" property="sequenceType" />
     <result column="limit_type" jdbcType="VARCHAR" property="limitType" />
+    <result column="limit_detail" jdbcType="VARCHAR" property="limitDetail" />
   </resultMap>
   <insert id="insert" keyColumn="id" keyProperty="id" parameterType="wei.tools.model.UpLimit" useGeneratedKeys="true">
     insert into t_up_limit (code, name, first_time,last_time,
       date, reason, open_count, 
-      sequence_count, sequence_type, limit_type
+      sequence_count, sequence_type, limit_type,limit_detail
       )
     values (#{code,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{firstTime,jdbcType=VARCHAR}, #{lastTime,jdbcType=VARCHAR},
       #{date,jdbcType=VARCHAR}, #{reason,jdbcType=VARCHAR}, #{openCount,jdbcType=INTEGER}, 
-      #{sequenceCount,jdbcType=INTEGER}, #{sequenceType,jdbcType=VARCHAR}, #{limitType,jdbcType=VARCHAR}
+      #{sequenceCount,jdbcType=INTEGER}, #{sequenceType,jdbcType=VARCHAR}, #{limitType,jdbcType=VARCHAR},#{limitDetail,jdbcType=VARCHAR}
       )
   </insert>
   <update id="updateByPrimaryKey" parameterType="wei.tools.model.UpLimit">
@@ -35,35 +36,36 @@
       open_count = #{openCount,jdbcType=INTEGER},
       sequence_count = #{sequenceCount,jdbcType=INTEGER},
       sequence_type = #{sequenceType,jdbcType=VARCHAR},
-      limit_type = #{limitType,jdbcType=VARCHAR}
+      limit_type = #{limitType,jdbcType=VARCHAR},
+      limit_detail = #{limitDetail,jdbcType=VARCHAR}
     where id = #{id,jdbcType=INTEGER}
   </update>
   <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="BaseResultMap">
     select id, code, name, first_time,last_time, date, reason, open_count, sequence_count, sequence_type,
-    limit_type
+    limit_type,limit_detail
     from t_up_limit
     where id = #{id,jdbcType=INTEGER}
   </select>
   <select id="findAll" resultMap="BaseResultMap">
     select id, code, name,first_time, last_time, date, reason, open_count, sequence_count, sequence_type,
-    limit_type
+    limit_type,limit_detail
     from t_up_limit
   </select>
 
   <insert id="batchInsertOrUpdate">
-    insert into t_up_limit (code,name,first_time,last_time,date,reason,open_count,sequence_count,sequence_type,limit_type)
+    insert into t_up_limit (code,name,first_time,last_time,date,reason,open_count,sequence_count,sequence_type,limit_type,limit_detail)
     values
     <foreach collection="records" index="index" item="record" separator=",">
       (#{record.code},#{record.name},#{record.firstTime},#{record.lastTime},#{record.date},#{record.reason},#{record.openCount},#{record.sequenceCount}
-      ,#{record.sequenceType},#{record.limitType})
+      ,#{record.sequenceType},#{record.limitType},#{record.limitDetail})
     </foreach>
     ON DUPLICATE KEY UPDATE code=values(code),name=values(name),first_time=values(first_time),last_time=values(last_time),date=values(date),reason=values(reason)
-    ,open_count=values(open_count),sequence_count=values(sequence_count),sequence_type=values(sequence_type),limit_type=values(limit_type)
+    ,open_count=values(open_count),sequence_count=values(sequence_count),sequence_type=values(sequence_type),limit_type=values(limit_type),limit_detail=values(limit_detail)
   </insert>
 
   <select id="selectByDateStr" parameterType="java.lang.String" resultMap="BaseResultMap">
     select id, code, name,first_time, last_time, date, reason, open_count, sequence_count, sequence_type,
-    limit_type
+    limit_type,limit_detail
     from t_up_limit
     where date = #{dateStr,jdbcType=VARCHAR}
   </select>

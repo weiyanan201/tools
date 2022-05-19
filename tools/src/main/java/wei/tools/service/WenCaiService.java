@@ -1,9 +1,11 @@
 package wei.tools.service;
 
+import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import net.sf.jsqlparser.statement.select.Limit;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +27,7 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 import java.io.*;
+import java.math.BigDecimal;
 import java.text.ParseException;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -61,6 +64,8 @@ public class WenCaiService {
     //题材 涨幅维度
     public static String QUERY_FORMAT_THEME_ROSE = "%s 板块涨幅及涨停个数；同花顺概念指数；按 %s 涨跌幅从大到小排序";
     //
+//    public static String QUERY_FORMAT_EARNING_RATE = "%s 883900和883958和883918和883910 涨幅";
+    public static String QUERY_FORMAT_EARNING_RATE = "%s 883900和883958和883918和883910和上证指数 和深证综指和创业板指 涨幅";
 
     //涨停字段
     private static String FIELD_LIMIT_TYPE_FORMAT = "涨停类型[%s]";
@@ -72,6 +77,7 @@ public class WenCaiService {
     private static String FIELD_LAST_TIME_FORMAT = "最终涨停时间[%s]";
     private static String FIELD_OPEN_COUNT_FORMAT = "涨停开板次数[%s]";
     private static String FIELD_FIRST_TIME_FORMAT = "首次涨停时间[%s]";
+    private static String FIELD_LIMIT_DETAIL_FORMAT = "涨停明细数据[%s]";
 
     //跌停字段
     private static String FIELD_DROP_TYPE_FORMAT = "跌停类型[%s]";
@@ -89,11 +95,35 @@ public class WenCaiService {
     private static String FIELD_BROKEN_FIRST_TIME_FORMAT = "首次涨停时间[%s]";
     private static String FIELD_BROKEN_LAST_TIME_FORMAT = "涨停时间明细[%s]";
     private static String FIELD_BROKEN_CLOSE_PRICE = "最新价";
+    private static String FIELD_BROKEN_LIMIT_DETAIL_FORMAT = "涨停明细数据[%s]";
 
     //板块字段
     private static String FIELD_BUSINESS_NAME = "指数简称";
     private static String FIELD_BUSINESS_ROSE_FORMAT = "指数@涨跌幅:前复权[%s]";
     private static String FIELD_BUSINESS_LIMIT_FORMAT = "指数@涨停家数[%s]";
+
+    private static String EARNING_SEQUENCE = "SEQUENCE";
+    private static String EARNING_LIMIT = "LIMIT";
+    private static String EARNING_BROKEN = "BROKEN";
+    private static String EARNING_HOT = "HOT";
+
+    private static String FIELD_EARNING_CODE = "code";
+    private static String FIELD_EARNING_NAME = "简称";
+    private static String FIELD_EARNING_ROSE = "涨跌幅";
+    private static String FIELD_EARNING_DATE = "时间区间";
+
+    private static Map<String,String> EARNING_MAP = Maps.newHashMap();
+    static{
+        EARNING_MAP.put("883958",EARNING_SEQUENCE);
+        EARNING_MAP.put("883900",EARNING_LIMIT);
+        EARNING_MAP.put("883918",EARNING_BROKEN);
+        EARNING_MAP.put("883910",EARNING_HOT);
+
+        EARNING_MAP.put("昨日连板",EARNING_SEQUENCE);
+        EARNING_MAP.put("昨日涨停表现",EARNING_LIMIT);
+        EARNING_MAP.put("昨日炸板股",EARNING_BROKEN);
+        EARNING_MAP.put("同花顺热股",EARNING_HOT);
+    }
 
     //上涨下跌提取
     private static Pattern upDropCountPattern = Pattern.compile("\\((\\d+)+\\).*\\((\\d+)+\\)");
@@ -245,6 +275,52 @@ public class WenCaiService {
         emotionalCycle.setHotBusinessOrderLimit(resultSb.toString());
 
     }
+    //统计昨日涨停、炸板、连续涨停收益
+    public void queryEarningRate(EmotionalCycle emotionalCycle, String date){
+
+        String dateUnSymbol = DateUtils.coverToUnSymbol(date);
+        String earningRateStr = String.format(QUERY_FORMAT_EARNING_RATE,date);
+        JSONObject earningRateJson = getWencaiZhiShuJson(earningRateStr);
+        JSONObject earningRateResultJson = apiService.post(wencaiUrl,earningRateJson,getCookieHeaders());
+
+        String field_earning_code = FIELD_EARNING_CODE;
+        String field_earning_rose = FIELD_EARNING_ROSE;
+        String field_earning_name = FIELD_EARNING_NAME;
+        String field_earning_date = FIELD_EARNING_DATE;
+        JSONObject dataJson = earningRateResultJson.getJSONObject("data");
+        JSONArray c_data_datas_array = parseToDatas(dataJson);
+
+        Map<String, BigDecimal> rateMap = Maps.newHashMap();
+        for (int i=0;i<c_data_datas_array.size();i++){
+            //结果返回不一致 2中格式！
+            JSONObject resultJson = c_data_datas_array.getJSONObject(i);
+            boolean reIndex = false;
+            //指数会重置
+            if (DecimalUtils.getBigDecimal(resultJson.getFloat(field_earning_rose)).floatValue()>10 || DecimalUtils.getBigDecimal(resultJson.getFloat(field_earning_rose)).floatValue()<-10 ){
+                reIndex = true;
+            }
+            if (resultJson.containsKey(field_earning_code)){
+                if (!StringUtils.equals(resultJson.getString(field_earning_date),dateUnSymbol)){
+                    continue;
+                }
+                rateMap.put(EARNING_MAP.get(resultJson.getString(field_earning_code)), reIndex?new BigDecimal(100):DecimalUtils.getBigDecimal(resultJson.getFloat(field_earning_rose)));
+            }else {
+                rateMap.put(EARNING_MAP.get(resultJson.getString(field_earning_name)),reIndex?new BigDecimal(100):DecimalUtils.getBigDecimal(resultJson.getFloat(field_earning_rose)));
+            }
+        }
+        emotionalCycle.setEarningBrokenLimitRate(rateMap.get(EARNING_BROKEN));
+        emotionalCycle.setEarningLimitRate(rateMap.get(EARNING_LIMIT));
+        emotionalCycle.setEarningSequenceLimitRate(rateMap.get(EARNING_SEQUENCE));
+        emotionalCycle.setEarningHotRate(rateMap.get(EARNING_HOT));
+//        System.out.println(emotionalCycle);
+    }
+
+    @Deprecated
+    public EmotionalCycle fixUpdateEarningRate( String date){
+        EmotionalCycle emotionalCycle = new EmotionalCycle(date);
+        queryEarningRate(emotionalCycle,date);
+        return emotionalCycle;
+    }
 
     private HttpHeaders getCookieHeaders()  {
         HttpHeaders headers = new HttpHeaders();
@@ -301,6 +377,7 @@ public class WenCaiService {
         String field_last_time = String.format(FIELD_LAST_TIME_FORMAT,dateStr);
         String field_open_count = String.format(FIELD_OPEN_COUNT_FORMAT,dateStr);
         String field_first_time = String.format(FIELD_FIRST_TIME_FORMAT,dateStr);
+        String field_limit_detail = String.format(FIELD_LIMIT_DETAIL_FORMAT,dateStr);
 
         List<UpLimit> lists = Lists.newArrayList();
         //处理reason 统计题材
@@ -351,6 +428,7 @@ public class WenCaiService {
             upLimit.setFirstTime(js.getString(field_first_time));
             upLimit.setLastTime(js.getString(field_last_time));
             upLimit.setOpenCount(js.getInteger(field_open_count));
+            upLimit.setLimitDetail(js.getString(field_limit_detail));
             lists.add(upLimit);
         }
 
@@ -506,6 +584,8 @@ public class WenCaiService {
     }
 
     public List<BrokenLimit> queryBrokenLimit(EmotionalCycle emotionalCycle,String date,boolean isHistory) throws ParseException {
+        //2022.04.12 不再差历史题材
+        isHistory = true;
         if (isHistory){
             //历史数据没必要差题材
             return queryBrokenLimit(emotionalCycle,date,false,true,isHistory);
@@ -556,6 +636,7 @@ public class WenCaiService {
         String field_broken_first_time = String.format(FIELD_BROKEN_FIRST_TIME_FORMAT,dateStr);
         String field_broken_last_time = String.format(FIELD_BROKEN_LAST_TIME_FORMAT,dateStr);
         String field_broken_close_price = FIELD_BROKEN_CLOSE_PRICE;
+        String field_broken_limit_detail = String.format(FIELD_BROKEN_LIMIT_DETAIL_FORMAT,dateStr);
 
         JSONObject dataJson = brokenResult.getJSONObject("data");
         JSONArray answerArray = dataJson.getJSONArray("answer");
@@ -579,6 +660,7 @@ public class WenCaiService {
                 limit.setCode(resultJson.getString(field_broken_code));
                 limit.setCloseTimeMin(resultJson.getString(field_broken_close_time_min));
                 limit.setOpenCount(resultJson.getInteger(field_broken_open_count));
+                limit.setLimitDetail(resultJson.getString(field_broken_limit_detail));
                 //亏损率 最新涨跌幅-10
                 if (doesParseLoseRate){
                     if (isToday){
@@ -609,9 +691,9 @@ public class WenCaiService {
                 if (lastUpLimitList.size()>0){
                     //昨日统计过涨停内容
                     if (lastUpLimitNameMap.containsKey(limit.getName())){
-                        limit.setBrokenLimitType(lastUpLimitNameMap.get(limit.getName()).getSequenceCount()+1+"板");
+                        limit.setBrokenLimitType(lastUpLimitNameMap.get(limit.getName()).getSequenceCount()+1);
                     }else {
-                        limit.setBrokenLimitType("首板");
+                        limit.setBrokenLimitType(1);
                     }
                 }
 
@@ -737,5 +819,76 @@ public class WenCaiService {
         }
 
     }
+
+    public void pickPmFirstLimit(String dateStr) throws ParseException {
+        EmotionalCycle emotionalCycle = new EmotionalCycle(dateStr);
+        List<UpLimit> upLimits = queryUpLimit(emotionalCycle,dateStr,true);
+        List<BrokenLimit> brokenLimits = queryBrokenLimit(emotionalCycle,dateStr,true);
+
+        long openTime = DateUtils.getPMOpenTime(dateStr);
+        long minTime = openTime;
+        String code = "";
+        for (UpLimit upLimit : upLimits){
+            String limitDetail = upLimit.getLimitDetail();
+            if (StringUtils.isBlank(limitDetail)){
+                continue;
+            }
+            try{
+                JSONArray jsonArray = JSONArray.parseArray(limitDetail);
+                for (int i=0;i<jsonArray.size();i++){
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    long time = jsonObject.getLong("time");
+                    //排除回封
+                    if (time<openTime){
+                        break;
+                    }
+                    if (time<openTime){
+                        continue;
+                    }
+                    if (i==0){
+                        minTime = time;
+                        code = upLimit.getCode();
+                    }
+                    if (minTime>time){
+                        minTime = time;
+                        code = upLimit.getCode();
+                    }
+                }
+            }catch (Exception exception){
+                continue;
+            }
+
+        }
+        for (BrokenLimit brokenLimit : brokenLimits){
+            String limitDetail = brokenLimit.getLimitDetail();
+            if (StringUtils.isBlank(limitDetail)){
+                continue;
+            }
+            try{
+                JSONArray jsonArray = JSONArray.parseArray(limitDetail);
+                for (int i=0;i<jsonArray.size();i++){
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    long time = jsonObject.getLong("time");
+                    //排除回封
+                    if (time<openTime){
+                        break;
+                    }
+                    if (time<openTime){
+                        continue;
+                    }
+                    if (minTime>time){
+                        minTime = time;
+                        code = brokenLimit.getCode();
+                    }
+                }
+            }catch (Exception e){
+                continue;
+            }
+        }
+
+        System.out.println("time : " + minTime);
+        System.out.println("code : " + code);
+    }
+
 
 }

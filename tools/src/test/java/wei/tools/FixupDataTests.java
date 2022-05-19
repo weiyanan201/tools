@@ -7,10 +7,7 @@ import wei.tools.dao.EmotionalCycleMapper;
 import wei.tools.dao.UpLimitMapper;
 import wei.tools.model.EmotionalCycle;
 import wei.tools.model.UpLimit;
-import wei.tools.service.ExcelService;
-import wei.tools.service.StockReviewService;
-import wei.tools.service.TradingDayService;
-import wei.tools.service.WenCaiService;
+import wei.tools.service.*;
 
 import javax.script.ScriptException;
 import java.io.IOException;
@@ -32,7 +29,8 @@ class FixupDataTests {
 	private TradingDayService tradingDayService;
 	@Autowired
 	private ExcelService excelService;
-
+	@Autowired
+	private StockComputeService stockComputeService;
 
 	//补涨停数据+题材
 	//mysql uplimit + firstTime字段
@@ -52,6 +50,27 @@ class FixupDataTests {
 
 			System.out.println(day + " 运行完成!");
 		}
+	}
+
+	@Test
+	void testComputeTimeSlotHoldRateForFirst() throws ParseException, IOException {
+		List<String> days = tradingDayService.getPeriodTradingDays("2021-01-17","2022-04-07");
+		for (String day : days){
+
+			stockComputeService.computeTimeSlotHoldRateForFirst(day);
+
+		}
+	}
+
+	@Test
+	void testFixUpdateEarning() throws IOException, ParseException {
+		List<String> days = tradingDayService.getPeriodTradingDays("2021-01-01","2021-12-31");
+		for (String day : days){
+			EmotionalCycle emotionalCycle = wenCaiService.fixUpdateEarningRate(day);
+			emotionalCycleMapper.fixUpdateEarningRate(emotionalCycle);
+			excelService.fixUpdateEarningRate(emotionalCycle,day);
+		}
+
 	}
 
 

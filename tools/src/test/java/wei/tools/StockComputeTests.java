@@ -40,5 +40,10 @@ class StockComputeTests {
 		System.out.println(r);//great
 	}
 
+	@Test
+	void testComputeBrokenRate() throws ParseException {
+		stockComputeService.computeTimeSlotHoldRateForFirst("2022-02-18");
+	}
+
 
 }

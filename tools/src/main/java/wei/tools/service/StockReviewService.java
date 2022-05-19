@@ -60,6 +60,11 @@ public class StockReviewService {
     @Autowired
     private StockDetailMapper stockDetailMapper;
 
+    public void reviewByDate() throws IOException, ParseException {
+        String dateStr = DateUtils.getTodayStr();
+        reviewByDate(dateStr,false);
+    }
+
     public void reviewByDate(String dateStr) throws IOException, ParseException {
         reviewByDate(dateStr,false);
     }
@@ -87,6 +92,10 @@ public class StockReviewService {
         List<BrokenLimit> brokenLimits = wenCaiService.queryBrokenLimit(emotionalCycle,dateStr,isHistory);
         //查询板块
         wenCaiService.queryHotBusiness(emotionalCycle,dateStr);
+
+        //昨日涨停等指标统计
+        wenCaiService.queryEarningRate(emotionalCycle,dateStr);
+
         //结果写入excel
         excelService.writeEmotionCycleResult(emotionalCycle,dateStr);
 

@@ -33,9 +33,11 @@ public class EmotionalCycle {
 
     private BigDecimal earningFirstLimitRate;
 
-    private BigDecimal earningSequenceLimitReate;
+    private BigDecimal earningSequenceLimitRate;
 
     private BigDecimal earningBrokenLimitRate;
+
+    private BigDecimal earningHotRate;
 
     private String hotBusinessOrderLimit;
 
@@ -145,12 +147,20 @@ public class EmotionalCycle {
         this.earningFirstLimitRate = earningFirstLimitRate;
     }
 
-    public BigDecimal getEarningSequenceLimitReate() {
-        return earningSequenceLimitReate;
+    public BigDecimal getEarningSequenceLimitRate() {
+        return earningSequenceLimitRate;
     }
 
-    public void setEarningSequenceLimitReate(BigDecimal earningSequenceLimitReate) {
-        this.earningSequenceLimitReate = earningSequenceLimitReate;
+    public void setEarningSequenceLimitRate(BigDecimal earningSequenceLimitRate) {
+        this.earningSequenceLimitRate = earningSequenceLimitRate;
+    }
+
+    public BigDecimal getEarningHotRate() {
+        return earningHotRate;
+    }
+
+    public void setEarningHotRate(BigDecimal earningHotRate) {
+        this.earningHotRate = earningHotRate;
     }
 
     public BigDecimal getEarningBrokenLimitRate() {
@@ -226,7 +236,7 @@ public class EmotionalCycle {
                 ", moreLimitStr='" + moreLimitStr + '\'' +
                 ", earningLimitRate=" + earningLimitRate +
                 ", earningFirstLimitRate=" + earningFirstLimitRate +
-                ", earningSequenceLimitReate=" + earningSequenceLimitReate +
+                ", earningSequenceLimitRate=" + earningSequenceLimitRate +
                 ", earningBrokenLimitRate=" + earningBrokenLimitRate +
                 ", hotBusinessOrderLimit='" + hotBusinessOrderLimit + '\'' +
                 ", hotThemeOrderLimit='" + hotThemeOrderLimit + '\'' +

@@ -51,9 +51,9 @@
     (
     SELECT
         case bl.broken_limit_type
-            WHEN '首板' then '1'
-            WHEN '2板' then '2'
-            WHEN '3板' THEN '3'
+            WHEN '1' then '1'
+            WHEN '2' then '2'
+            WHEN '3' THEN '3'
             ELSE '3+'
             END
         as num_count,

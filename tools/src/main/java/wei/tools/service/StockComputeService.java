@@ -105,7 +105,9 @@ public class StockComputeService {
 
         }
         //入库
-        timeSlotHoldRateMapper.batchInsertOrUpdate(records);
+        if (records!=null && records.size()>0){
+            timeSlotHoldRateMapper.batchInsertOrUpdate(records);
+        }
     }
 
     public static void main(String[] args) {

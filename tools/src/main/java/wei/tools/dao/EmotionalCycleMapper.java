@@ -1,5 +1,6 @@
 package wei.tools.dao;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import org.apache.ibatis.annotations.Param;
@@ -12,4 +13,7 @@ public interface EmotionalCycleMapper {
     List<EmotionalCycle> findAll();
 
     EmotionalCycle selectByDate(@Param(value = "dateStr") String dateStr);
+
+    @Deprecated
+    void fixUpdateEarningRate(EmotionalCycle record);
 }

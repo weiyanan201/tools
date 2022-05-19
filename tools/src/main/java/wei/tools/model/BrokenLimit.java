@@ -23,7 +23,9 @@ public class BrokenLimit {
 
     private Float closePrice;
 
-    private String brokenLimitType;
+    private Integer brokenLimitType;
+
+    private String limitDetail;
 
     public Integer getId() {
         return id;
@@ -113,12 +115,20 @@ public class BrokenLimit {
         this.closePrice = closePrice;
     }
 
-    public String getBrokenLimitType() {
+    public Integer getBrokenLimitType() {
         return brokenLimitType;
     }
 
-    public void setBrokenLimitType(String brokenLimitType) {
+    public void setBrokenLimitType(Integer brokenLimitType) {
         this.brokenLimitType = brokenLimitType;
+    }
+
+    public String getLimitDetail() {
+        return limitDetail;
+    }
+
+    public void setLimitDetail(String limitDetail) {
+        this.limitDetail = limitDetail;
     }
 
     @Override

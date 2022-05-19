@@ -70,7 +70,7 @@
         when STR_TO_DATE(bl.first_time,'%H:%i:%s') &gt; STR_TO_DATE('14:30:00','%H:%i:%s') and STR_TO_DATE(bl.first_time,'%H:%i:%s') &lt;= STR_TO_DATE('15:00:00','%H:%i:%s') then '8'
         ELSE '0'
         end as time_type
-      FROM  t_broken_limit bl where  bl.date=#{lastDateStr} and bl.broken_limit_type='首板'
+      FROM  t_broken_limit bl where  bl.date=#{lastDateStr} and bl.broken_limit_type=1
 
       ) t_limit
     join

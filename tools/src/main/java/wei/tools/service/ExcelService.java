@@ -136,12 +136,70 @@ public class ExcelService {
         Cell cell15 = insertRow.createCell(14);
         cell15.setCellStyle(sheet.getColumnStyle(14));
         cell15.setCellValue(emotionalCycle.getHotBusinessOrderLimit());
+//        //昨日涨停
+//        Cell cell16 = insertRow.createCell(15);
+//        cell16.setCellStyle(sheet.getColumnStyle(15));
+//        cell16.setCellValue(emotionalCycle.getEarningLimitRate().floatValue());
+//        //昨日连板
+//        Cell cell17 = insertRow.createCell(16);
+//        cell17.setCellStyle(sheet.getColumnStyle(16));
+//        cell17.setCellValue(emotionalCycle.getEarningSequenceLimitRate().floatValue());
+//        //昨日炸板
+//        Cell cell18 = insertRow.createCell(17);
+//        cell18.setCellStyle(sheet.getColumnStyle(17));
+//        cell18.setCellValue(emotionalCycle.getEarningBrokenLimitRate().floatValue());
+//        //同花顺热门股收益
+//        Cell cell19 = insertRow.createCell(18);
+//        cell19.setCellStyle(sheet.getColumnStyle(18));
+//        cell19.setCellValue(emotionalCycle.getEarningHotRate().floatValue());
 
 //        formulaEvaluator.evaluateAll();
 
         FileOutputStream out = new FileOutputStream(excelFilePath);
         wb.write(out);
 
+    }
+
+    @Deprecated
+    public void fixUpdateEarningRate(EmotionalCycle emotionalCycle, String dateStr) throws IOException {
+        String[] dss = dateStr.split("-");
+        String dateExStr = dss[1]+"."+dss[2];
+
+        InputStream in  = new FileInputStream(new File(excelFilePath));
+        XSSFWorkbook wb = new XSSFWorkbook(in);
+        FormulaEvaluator formulaEvaluator = new XSSFFormulaEvaluator(wb);
+
+        Sheet sheet = wb.getSheet("情绪周期表");
+
+
+        Row insertRow = calculateInsertRow(sheet,dateExStr);
+        int insertNum = insertRow.getRowNum()+1;
+
+        //写入数据
+        short height = 800;
+        insertRow.setHeight(height);
+
+        //昨日涨停
+        Cell cell16 = insertRow.createCell(15);
+        cell16.setCellStyle(sheet.getColumnStyle(15));
+        cell16.setCellValue(emotionalCycle.getEarningLimitRate().floatValue());
+        //昨日连板
+        Cell cell17 = insertRow.createCell(16);
+        cell17.setCellStyle(sheet.getColumnStyle(16));
+        cell17.setCellValue(emotionalCycle.getEarningSequenceLimitRate().floatValue());
+        //昨日炸板
+        Cell cell18 = insertRow.createCell(17);
+        cell18.setCellStyle(sheet.getColumnStyle(17));
+        cell18.setCellValue(emotionalCycle.getEarningBrokenLimitRate().floatValue());
+        //同花顺热门股收益
+        Cell cell19 = insertRow.createCell(18);
+        cell19.setCellStyle(sheet.getColumnStyle(18));
+        cell19.setCellValue(emotionalCycle.getEarningHotRate().floatValue());
+
+//        formulaEvaluator.evaluateAll();
+
+        FileOutputStream out = new FileOutputStream(excelFilePath);
+        wb.write(out);
     }
 
     /**

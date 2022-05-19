@@ -108,6 +108,24 @@ public class DateUtils {
         return betweenDays.intValue();
     }
 
+    /**
+     * 获取下午开盘时间
+     * @param day
+     * @return
+     */
+    public static long getPMOpenTime(String day) throws ParseException {
+        DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+        Date date = format.parse(day);
+
+
+        Calendar pmOpenCal = Calendar.getInstance();
+        pmOpenCal.setTime(date);
+        pmOpenCal.set(Calendar.HOUR,13);
+        pmOpenCal.set(Calendar.MINUTE,00);
+
+        return pmOpenCal.getTime().getTime();
+    }
+
     public static String str;
 
     public static void main(String[] args) throws Exception {

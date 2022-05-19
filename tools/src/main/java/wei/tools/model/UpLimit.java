@@ -23,6 +23,8 @@ public class UpLimit {
 
     private String limitType;
 
+    private String limitDetail;
+
     public Integer getId() {
         return id;
     }
@@ -109,5 +111,13 @@ public class UpLimit {
 
     public void setFirstTime(String firstTime) {
         this.firstTime = firstTime;
+    }
+
+    public String getLimitDetail() {
+        return limitDetail;
+    }
+
+    public void setLimitDetail(String limitDetail) {
+        this.limitDetail = limitDetail;
     }
 }

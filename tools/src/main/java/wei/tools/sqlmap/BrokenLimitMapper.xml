@@ -13,17 +13,19 @@
     <result column="theme" jdbcType="VARCHAR" property="theme" />
     <result column="loss_rate" jdbcType="REAL" property="lossRate" />
     <result column="close_price" jdbcType="REAL" property="closePrice" />
-    <result column="broken_limit_type" jdbcType="VARCHAR" property="brokenLimitType" />
+    <result column="broken_limit_type" jdbcType="INTEGER" property="brokenLimitType" />
+    <result column="limit_detail" jdbcType="VARCHAR" property="limitDetail" />
   </resultMap>
   <insert id="insert" keyColumn="id" keyProperty="id" parameterType="wei.tools.model.BrokenLimit" useGeneratedKeys="true">
     insert into t_broken_limit (code, name, first_time, 
       last_time, date,
       open_count, close_time_min, theme, 
-      loss_rate,close_price,broken_limit_type)
+      loss_rate,close_price,broken_limit_type,limit_detail)
     values (#{code,jdbcType=VARCHAR}, #{name,jdbcType=VARCHAR}, #{firstTime,jdbcType=VARCHAR}, 
       #{lastTime,jdbcType=VARCHAR}, #{date,jdbcType=VARCHAR},
       #{openCount,jdbcType=INTEGER}, #{closeTimeMin,jdbcType=VARCHAR}, #{theme,jdbcType=VARCHAR}, 
-      #{lossRate,jdbcType=REAL},#{closePrice,jdbcType=REAL},#{brokenLimitType,jdbcType=VARCHAR})
+      #{lossRate,jdbcType=REAL},#{closePrice,jdbcType=REAL},#{brokenLimitType,jdbcType=INTEGER},#{limitDetail,jdbcType=VARCHAR})
+
   </insert>
   <update id="updateByPrimaryKey" parameterType="wei.tools.model.BrokenLimit">
     update t_broken_limit
@@ -37,37 +39,38 @@
       theme = #{theme,jdbcType=VARCHAR},
       loss_rate = #{lossRate,jdbcType=REAL},
       close_price = #{closePrice,jdbcType=REAL},
-      broken_limit_type = #{brokenLimitType,jdbcType=VARCHAR}
+      broken_limit_type = #{brokenLimitType,jdbcType=INTEGER},
+      limit_detail = #{limitDetail,jdbcType=VARCHAR}
     where id = #{id,jdbcType=INTEGER}
   </update>
   <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="BaseResultMap">
     select id, code, name, first_time, last_time, date, open_count, close_time_min,
-    theme, loss_rate,close_price,broken_limit_type
+    theme, loss_rate,close_price,broken_limit_type,limit_detail
     from t_broken_limit
     where id = #{id,jdbcType=INTEGER}
   </select>
   <select id="findAll" resultMap="BaseResultMap">
     select id, code, name, first_time, last_time, date, open_count, close_time_min,
-    theme, loss_rate,close_price,broken_limit_type
+    theme, loss_rate,close_price,broken_limit_type,limit_detail
     from t_broken_limit
   </select>
 
   <insert id="batchInsertOrUpdate">
-    insert into t_broken_limit (code,name,first_time,last_time,date,open_count,close_time_min,theme,loss_rate,close_price,broken_limit_type)
+    insert into t_broken_limit (code,name,first_time,last_time,date,open_count,close_time_min,theme,loss_rate,close_price,broken_limit_type,limit_detail)
     values
     <foreach collection="records" index="index" item="record" separator=",">
       (#{record.code},#{record.name},#{record.firstTime},#{record.lastTime},#{record.date},#{record.openCount},#{record.closeTimeMin}
       ,#{record.theme},cast(#{record.lossRate,jdbcType=DECIMAL} as decimal(14,5)),cast(#{record.closePrice,jdbcType=DECIMAL} as decimal(14,5))
-      ,#{record.brokenLimitType})
+      ,#{record.brokenLimitType},#{record.limitDetail})
     </foreach>
     ON DUPLICATE KEY UPDATE code=values(code),name=values(name),first_time=values(first_time),last_time=values(last_time),date=values(date)
     ,open_count=values(open_count),close_time_min=values(close_time_min),theme=values(theme),loss_rate=values(loss_rate),close_price=values(close_price)
-    ,broken_limit_type=values(broken_limit_type)
+    ,broken_limit_type=values(broken_limit_type),limit_detail=values(limit_detail)
   </insert>
 
   <select id="selectByDateStr" parameterType="java.lang.String" resultMap="BaseResultMap">
     select id, code, name, first_time, last_time, date, open_count, close_time_min,
-    theme, loss_rate,close_price,broken_limit_type
+    theme, loss_rate,close_price,broken_limit_type,limit_detail
     from t_broken_limit
     where date = #{dateStr,jdbcType=VARCHAR}
   </select>
